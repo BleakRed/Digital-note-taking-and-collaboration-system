@@ -134,6 +134,15 @@ export default function Dashboard() {
             >
               <LogOut size={20} />
             </button>
+            {user?.email === 'admin@example.com' && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-500 hover:text-blue-500 transition-all"
+                title="Admin Panel"
+              >
+                <Settings size={20} />
+              </button>
+            )}
           </div>
         </div>
       </header>

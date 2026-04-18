@@ -14,6 +14,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const FROM_EMAIL = process.env.SMTP_FROM || 'Notion Clone <noreply@example.com>';
 
 export const sendVerificationEmail = async (email: string, token: string) => {
+  if (process.env.NODE_ENV === 'test') return;
   const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
   
   const mailOptions = {
@@ -32,6 +33,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 };
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
+  if (process.env.NODE_ENV === 'test') return;
   const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
   
   const mailOptions = {
