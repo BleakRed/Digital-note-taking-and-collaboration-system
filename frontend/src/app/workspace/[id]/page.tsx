@@ -105,19 +105,26 @@ export default function Workspace() {
 
     if (!Cookies.get('token')) {
       router.push('/');
-    } else {
-      fetchWorkspace();
-      fetchPages();
-      fetchChatRooms();
-      fetchKanbanBoards();
-      fetchMembers();
+      return;
     }
 
-    // Appearance
+    // Load appearance before rendering anything
     const savedMode = localStorage.getItem('darkMode') === 'true';
     setIsDarkMode(savedMode);
     if (savedMode) document.documentElement.classList.add('dark');
+
+    // Kick off all the initial fetches
+    fetchWorkspace();
+    fetchPages();
+    fetchChatRooms();
+    fetchKanbanBoards();
+    fetchMembers();
   }, [workspaceId]);
+
+  // Refetch boards once workspace is resolved — fixes race with fetchWorkspace
+  useEffect(() => {
+    if (workspaceId) fetchKanbanBoards();
+  }, [workspace?.id]);
 
   const fetchChatRooms = async () => {
     try {

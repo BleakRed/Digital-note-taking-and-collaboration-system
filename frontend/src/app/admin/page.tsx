@@ -312,6 +312,32 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleCleanupUnverified = async () => {
+    if (!confirm("Delete all unverified users older than 1 month? This cannot be undone.")) return;
+    try {
+      const res = await api.delete("/admin/users/unverified", {
+        headers: { Authorization: `Bearer ${Cookies.get("token")}` }
+      });
+      alert(res.data.message || `Deleted ${res.data.deletedCount} users`);
+      router.refresh();
+    } catch (err) {
+      alert("Failed to clean unverified users");
+    }
+  };
+
+  const handleCleanupOrphanWorkspaces = async () => {
+    if (!confirm("Delete orphan workspaces with no members? This cannot be undone.")) return;
+    try {
+      const res = await api.delete("/admin/workspaces/orphan", {
+        headers: { Authorization: `Bearer ${Cookies.get("token")}` }
+      });
+      alert(res.data.message || `Deleted ${res.data.deletedCount} workspaces`);
+      router.refresh();
+    } catch (err) {
+      alert("Failed to clean orphan workspaces");
+    }
+  };
+
   const startEditUser = (user: User) => {
     setEditingUser(user.id);
     setEditUserForm({ username: user.username, isVerified: user.isVerified });
@@ -500,12 +526,26 @@ export default function AdminPage() {
             <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Last 30 Days Growth</h3>
-                <button
-                  onClick={() => handleExportReport()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Download size={16} /> Export Report
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCleanupOrphanWorkspaces}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  >
+                    <Trash2 size={16} /> Clean Orphan Workspaces
+                  </button>
+                  <button
+                    onClick={handleCleanupUnverified}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    <Trash2 size={16} /> Clean Unverified Users
+                  </button>
+                  <button
+                    onClick={() => handleExportReport()}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Download size={16} /> Export Report
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">

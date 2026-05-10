@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { 
   Palette, Trash2, Save, Eraser, Pen, MousePointer2, 
   RotateCcw, ChevronRight, ChevronLeft, Menu, X, 
@@ -23,10 +23,16 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
   
   const lastPos = useRef({ x: 0, y: 0 });
 
+  // Auto-load first drawing once drawings are fetched
   useEffect(() => {
-    fetchDrawings();
-    initCanvas();
-    
+    if (drawings.length === 0) return;
+    if (selectedDrawingId !== null) return;
+    const canvas = canvasRef.current;
+    if (!canvas || canvas.width === 0 || canvas.height === 0) return;
+    loadDrawing(drawings[0]);
+  }, [drawings, selectedDrawingId]);
+
+  useEffect(() => {
     // Join the drawing room
     const roomName = selectedDrawingId ? `drawing-saved-${selectedDrawingId}` : `drawing-${workspaceId}`;
     socket.emit('join-drawing', roomName);
@@ -63,9 +69,7 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
         img.src = state;
     });
 
-    window.addEventListener('resize', initCanvas);
     return () => {
-        window.removeEventListener('resize', initCanvas);
         socket.emit('leave-drawing', roomName);
         socket.off('stroke-received');
         socket.off('drawing-cleared');
@@ -74,31 +78,27 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
     };
   }, [workspaceId, selectedDrawingId]);
 
-  const initCanvas = () => {
+  // Set canvas size on mount — use fixed size to avoid 0x0 timing bugs
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    
-    // Save current content before resize
-    const tempImage = canvas.toDataURL();
-    
-    canvas.width = parent.clientWidth;
-    canvas.height = parent.clientHeight;
-    
+    // Set fixed logical size; CSS will scale visually
+    canvas.width = 900;
+    canvas.height = 600;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.fillStyle = 'white'; // Fill with white initially for saving visibility
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Restore content
-      const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0);
-      img.src = tempImage;
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 900, 600);
     }
-  };
+  }, []);
+
+  // Fetch drawings when workspace is ready
+  useEffect(() => {
+    if (!workspaceId) return;
+    fetchDrawings();
+  }, [workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDrawings = async () => {
     try {
@@ -275,6 +275,51 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    const data = drawing.data;
+
+    // If data is JSON stroke format (not a data URL) — convert it to canvas strokes
+    if (!data.startsWith('data:')) {
+      try {
+        const parsed = JSON.parse(data);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const strokes = parsed.strokes || parsed;
+        if (Array.isArray(strokes)) {
+          strokes.forEach((s) => {
+            ctx.strokeStyle = s.color || '#000';
+            ctx.lineWidth = s.width || 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalCompositeOperation =
+              s.tool === 'eraser' ? 'destination-out' : 'source-over';
+            ctx.beginPath();
+
+            if (s.tool === 'rect') {
+              ctx.strokeRect(s.x || 0, s.y || 0, s.w || 80, s.h || 40);
+            } else if (s.points && s.points.length >= 2) {
+              ctx.moveTo(s.points[0].x, s.points[0].y);
+              s.points.forEach((p: {x:number,y:number}) => ctx.lineTo(p.x, p.y));
+              ctx.stroke();
+            } else if (s.x1 !== undefined) {
+              ctx.moveTo(s.x1, s.y1);
+              ctx.lineTo(s.x2, s.y2);
+              ctx.stroke();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+          });
+        }
+
+        setSelectedDrawingId(drawing.id);
+        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+        return;
+      } catch (e) {
+        // Fall through to image render below
+      }
+    }
+
+    // Normal data URL / PNG — draw as image
     const img = new Image();
     img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -282,7 +327,7 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
         setSelectedDrawingId(drawing.id);
         if (window.innerWidth < 1024) setIsSidebarOpen(false);
     };
-    img.src = drawing.data;
+    img.src = data;
   };
 
   const newCanvas = () => {
@@ -438,7 +483,7 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
         </div>
 
         {/* Canvas Area */}
-        <div className={`flex-1 relative cursor-crosshair bg-slate-200 dark:bg-slate-800 transition-all ${isDrawing ? 'scale-[0.995]' : 'scale-100'}`}>
+        <div className={`flex-1 relative cursor-crosshair bg-slate-200 dark:bg-slate-800 transition-all ${isDrawing ? 'scale-[0.995]' : 'scale-100'}`} style={{ minHeight: 400 }}>
             <canvas
                 ref={canvasRef}
                 onMouseDown={startDrawing}

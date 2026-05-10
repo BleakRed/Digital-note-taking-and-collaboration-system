@@ -16,8 +16,10 @@ model User {
   id                String    @id @default(uuid())
   email             String    @unique
   password          String
-  name              String?
-  username          String?   @unique
+  firstName         String?
+  lastName         String?
+  name             String?
+  username         String?   @unique
   avatarUrl         String?
   isVerified        Boolean   @default(false)
   verificationToken String?

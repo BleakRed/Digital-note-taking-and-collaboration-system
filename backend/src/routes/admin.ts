@@ -119,15 +119,102 @@ router.get('/users/:id', authenticateToken, requireAdmin, async (req: AuthReques
     }
 });
 
-// Delete user (admin only)
-router.delete('/users/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+// Delete unverified users older than 1 month (admin only)
+router.delete('/users/unverified', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
     try {
-        await prisma.user.delete({
-            where: { id: req.params.id }
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+        const usersToDelete = await prisma.user.findMany({
+            where: {
+                isVerified: false,
+                createdAt: { lt: oneMonthAgo.toISOString() }
+            }
         });
-        res.json({ message: 'User deleted' });
+
+        if (usersToDelete.length === 0) {
+            res.json({ message: 'No unverified users older than 1 month', deletedCount: 0 });
+            return;
+        }
+
+        for (const user of usersToDelete) {
+            // Delete related data first
+            await Promise.all([
+                prisma.chatMessage.deleteMany({ where: { authorId: user.id } }),
+                prisma.page.deleteMany({ where: { authorId: user.id } }),
+                prisma.drawing.deleteMany({ where: { authorId: user.id } }),
+                prisma.kanbanCard.deleteMany({ where: { authorId: user.id } }),
+            ]);
+
+            // Delete workspaces owned by user first
+            await prisma.workspace.deleteMany({ where: { ownerId: user.id } });
+
+            // Remove user from workspace members
+            await prisma.workspaceMember.deleteMany({ where: { userId: user.id } });
+
+            // Finally delete the user
+            await prisma.user.delete({ where: { id: user.id } });
+        }
+
+        res.json({ message: 'Unverified users deleted', deletedCount: usersToDelete.length });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to delete user' });
+        console.error('Delete unverified users error:', error);
+        res.status(500).json({ error: 'Failed to delete unverified users' });
+    }
+});
+
+// Delete orphan workspaces (no members, admin only)
+router.delete('/workspaces/orphan', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+        // Find workspaces with no members and no owner
+        const orphanWorkspaces = await prisma.workspace.findMany({
+            where: {
+                members: { none: {} },
+                ownerId: { not: '' }
+            },
+            include: {
+                _count: { select: { pages: true, drawings: true, kanbanBoards: true } }
+            }
+        });
+
+        // Also find workspaces where owner doesn't exist
+        const allWorkspaces = await prisma.workspace.findMany({
+            include: {
+                owner: true,
+                _count: { select: { members: true, pages: true, drawings: true, kanbanBoards: true } }
+            }
+        });
+
+        const trulyOrphan = allWorkspaces.filter(ws => 
+            ws._count.members === 0 && !ws.owner
+        );
+
+        const toDelete = [...orphanWorkspaces, ...trulyOrphan];
+        const uniqueToDelete = Array.from(new Map(toDelete.map(w => [w.id, w])).values());
+
+        if (uniqueToDelete.length === 0) {
+            res.json({ message: 'No orphan workspaces found', deletedCount: 0 });
+            return;
+        }
+
+        for (const ws of uniqueToDelete) {
+            // Delete all related content
+            await Promise.all([
+                prisma.page.deleteMany({ where: { workspaceId: ws.id } }),
+                prisma.drawing.deleteMany({ where: { workspaceId: ws.id } }),
+                prisma.kanbanBoard.deleteMany({ where: { workspaceId: ws.id } }),
+                prisma.chatRoom.deleteMany({ where: { workspaceId: ws.id } }),
+                prisma.file.deleteMany({ where: { workspaceId: ws.id } }),
+            ]);
+
+            // Delete the workspace
+            await prisma.workspace.delete({ where: { id: ws.id } });
+        }
+
+        res.json({ message: 'Orphan workspaces deleted', deletedCount: uniqueToDelete.length });
+    } catch (error) {
+        console.error('Delete orphan workspaces error:', error);
+        res.status(500).json({ error: 'Failed to delete orphan workspaces' });
     }
 });
 

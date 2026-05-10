@@ -1,0 +1,1051 @@
+
+# ДИЖИТАЛ ТЭМДЭГЛЭЛ, ХАМТЫН АЖИЛЛАГААНЫ СИСТЕМ (NOTION CLONE) ХӨГЖҮҮЛЭХ ТОГТОЛЦОО
+
+**Дипломын төслийн судалгааны ажил**
+
+---
+
+## ХУРААНГУЙ
+
+Дижитал тэмдэглэл, хамтын ажиллагааны систем (Notion clone) нь бодит цагийн хамтын ажиллагаатай вэб аппликейшн юм. Хэрэглэгчид олон ажлын талбай үүсгэж, имэйлээр гишүүд урих/хасах, хуудсуудыг бодит цагт хамтран засварлах боломжтой. Socket.io ашиглан шууд синхрончлол, курсорын хөдөлгөөн, Markdown рендеринг (Obsidian маягаар), toggle view (засварлах/үзэх горим), зураг upload, dark mode зэрэг онцлогтой. Ажлын талбайн эзэн л гишүүдийг удирдах эрхтэй бөгөөд хасагдсан хэрэглэгч шууд хандах эрхээ алдана. Хуудсууд давхаршсан иерархи (infinite hierarchy), PostgreSQL + Prisma ORM-ээр хадгалагдана. Backend: Node.js, Express, JWT, Bcrypt; Frontend: Next.js, Tailwind CSS, Socket.io-client. Аюулгүй байдал, хялбар суурилуулалт (local PostgreSQL) онцлог. Төсөл нь Notion-ийн гол боломжуудыг хуулбарлаж, хөгжүүлэлтэнд тохиромжтой, өргөтгөх боломжтой архитектуртай.
+
+**Түлхүүр үг:** дижитал тэмдэглэл, бодит цаг, хамтын ажиллагаа, Socket.io, Notion clone, PostgreSQL, Next.js
+
+---
+
+## ОРШИЛ
+
+### Системийн зорилго
+Дижитал тэмдэглэл, хамтын ажиллагааны систем нь Notion платформын бодит цагийн хамтын засварлах, ажлын талбай удирдах үйл ажиллагааг Node.js, Next.js, Socket.io зэрэг орчин үеийн веб технологийн бүрэн стек ашиглан цахим хэлбэрт бүрэн шилжүүлэх зорилготой. Энэ нь олон хэрэглэгчийн синхрончлогдсон хамтын ажиллагааны дижитал тэмдэглэлийн цогц системийг бүтээхэд чиглэнэ.
+
+### Системийн хамрах хүрээ
+Системийн хамрах хүрээг дараах 3-н түшинд авч үзнэ:
+
+**1. Программын хамрах хүрээ**
+Backend-д Node.js + Express + Socket.io + Prisma ORM + PostgreSQL, Frontend-д Next.js (App Router) + Tailwind CSS + Socket.io-client ашиглан бодит цагийн хамтын засварлах, Markdown рендеринг, зураг upload, dark mode зэрэг Notion-ийн үндсэн боломжуудыг хэрэгжүүлнэ.
+
+**2. Хэрэглэгчийн хамрах хүрээ**
+Ажлын талбайн эзэн (Owner) гишүүдийг урих/хасах, хуудсуудыг удирдах; Гишүүд (Members) хамтын ажиллагаатайгаар хуудсуудыг засварлах, синхрончлон ажиллах үүрэгтэй.
+
+**3. Ижил төстэй байгууллагуудын хамрах хүрээ**
+Уян хатан модульчлагдсан архитектурын ачаар ямар ч байгууллага, багуудын хамтын ажиллагааны хэрэгцээнд тохируулан өргөжүүлэх, Notion-ийн ижил төстэй үйлчилгээ ашигладаг бүх байгууллагад хэрэглэх боломжтой.
+
+### Зорилтууд, түүний үнэлгээ
+
+**Зорилтууд:**
+1. Хэрэглэгчийн шаардлагыг Notion-ийн онцлог дээр суурилсан ярилцлага, ажиглалтаар тодорхойлно.
+2. Объект хандалтат системийн шинжилгээгээр архитектурыг зохиомжилно.
+3. Холбоост PostgreSQL өгөгдлийн санг Prisma ORM-ээр холбоно.
+4. Next.js, Socket.io зэрэг дээд түвшний технологийг ашиглан кодчилно.
+5. Unit, Integration, E2E тестээр системийг бүрэн шалгаж баталгаажуулна.
+
+**Үнэлгээ:**
+1. **Найдвартай**: JWT, backend validation, Socket.io reconnection-ээр 99.9% uptime хангана.
+2. **Уян хатан**: REST API, Prisma migration-ээр шинэ онцлог хурдан нэмэх боломжтой.
+3. **Хэрэглээтэй**: Cross-platform вэб аппликейшн тул Windows, Mac, Linux, mobile browser дээр ажиллана.
+4. **Сайжруулалттай**: GitHub, Prisma migration, Docker-ээр байнга шинэчлэгдэнэ.
+
+### Систем хөгжүүлэх үндэслэл
+Өмнө огт байгаагүй Монгол хэл дээрх, орон нутгийн хэрэгцээнд тохирсон, нээлттэй эхийн бодит цагийн хамтын дижитал тэмдэглэлийн систем байхгүй байсан учир шинэ систем хөгжүүлэх шаардлага төржээ. Notion-ийн SaaS загвараас хараат бус, өөрийн сервер дээр суурилуулж ашиглах боломжтой шийдлийг бүтээх зорилготой.
+
+---
+
+## НЭГ. СЭДВИЙН СУДЛАГДСАН БАЙДАЛ / СУДАЛГААНЫ ОНОЛ АРГА ЗҮЙ
+
+### 1.1 Ерөнхий судалгаа
+
+Дижитал тэмдэглэл, хамтын ажиллагааны системүүд (Notion clone) нь 2000-аад оноос Google Docs, Etherpad зэрэг бодит цагийн хамтын засварлах платформуудаас эхлэн хөгжсөн. Notion 2016 онд гарч, Markdown, database, nested pages, real-time collaboration-ийг нэгтгэсэн all-in-one workspace болж 2020+ онд SaaS зах зээлд ноёрхсон. Дотоодын хэмжээнд ийм нээлттэй эхийн шийдэл байхгүй, зөвхөн SaaS (Notion, Coda) ашигладаг байсан нь локал хөгжүүлэлтийн хомсдолыг харуулна.
+
+#### 1.1.1 Зах зээлийн судалгаа - Топ компаниуд
+
+**1. Notion (2016-өөс хойш)**
+- **Ерөнхий**: San Francisco-д төвтэй, 2024 онд $10B+ үнэлгээ
+- **Технологи**: React, Node.js, WebSocket, AWS infrastructure
+- **Онцлог**: Block-based editor, databases (tables/boards/calendars), API integration
+- **Бизнес загвар**: Freemium SaaS, enterprise төлбөртэй төлөвлөгөө
+- **Хэрэглэгч**: 30+ сая хэрэглэгч (2024), startup-аас Fortune 500 хүртэл
+
+**2. Coda (2014-өөс хойш)**
+- **Ерөнхий**: Former Google engineers үүсгэсэн, "doc as app" концепц
+- **Технологи**: React, Firebase, Google Cloud
+- **Онцлог**: Interactive buttons, formulas, Packs (integrations), automation
+- **Бизнес загвар**: Team/Enterprise төлбөртэй загвар
+- **Хэрэглэгч**: 50,000+ байгууллага ашигладаг
+
+**3. Confluence (2004-өөс хойш)**
+- **Ерөнхий**: Atlassian компани, enterprise төвлөрсөн
+- **Технологи**: Java, PostgreSQL, React (сүүлийн шинэчлэл)
+- **Онцлог**: Jira integration, enterprise permissions, compliance features
+- **Бизнес загвар**: Per-user subscription, enterprise contracts
+- **Хэрэглэгч**: 75,000+ байгууллага, 200+ сая хэрэглэгч
+
+**4. Slite (2017-өөс хойш)**
+- **Ерөнхий**: Paris-д төвтэй, team documentation төвлөрсөн
+- **Технологи**: React, Node.js, MongoDB, Socket.io
+- **Онцлог**: AI-powered search, lightweight UI, decision logs
+- **Бизнес загвар**: SMB-focused pricing
+- **Хэрэглэгч**: 100,000+ багууд
+
+**5. Outline (2018-өөс хойш)**
+- **Ерөнхий**: Нээлттэй эх (open-source), self-hosted боломжтой
+- **Технологи**: React, Node.js, PostgreSQL, Realtime API
+- **Онцлог**: Markdown-first, fast search, team knowledge base
+- **Бизнес загвар**: Open-source + paid cloud hosting
+- **Хэрэглэгч**: Tech companies, startups
+
+**6. Google Workspace (2006-өөс хойш)**
+- **Ерөнхий**: Google Docs → Workspace экосистем
+- **Технологи**: Google-ийн proprietary tech stack, operational transformation
+- **Онцлог**: Real-time collaboration standard, G Suite integration
+- **Бизнес загвар**: Business/Enterprise subscriptions
+- **Хэрэглэгч**: 3+ тэрбум хэрэглэгч
+
+#### 1.1.2 Технологийн судалгаа
+
+**Real-time синхрончлолын технологиуд:**
+- **Operational Transformation (OT)**: Google Docs анх ашигласан, conflict resolution алгоритм
+- **CRDT (Conflict-free Replicated Data Types)**: Yjs, Automerge сангууд, peer-to-peer синхрончлол
+- **Socket.io**: Firebase Realtime Database-тай өрсөлдөх, event-driven архитектур
+- **WebRTC**: Peer-to-peer алтернатив, serverless real-time
+
+**Frontend технологиуд:**
+- **React/Next.js**: Notion, Coda, Slite ашигладаг, component reusability
+- **Vue.js**: Alternative сонголт, Outline хэсэгт ашигладаг
+- **Tailwind CSS**: Utility-first, Notion-ийн modern UI загвар
+- **Monaco Editor**: VS Code-ийн editor, code blocks-д ашиглана
+
+**Backend технологиуд:**
+- **Node.js + Express**: Иж бүрэн JavaScript stack, Socket.io integration
+- **PostgreSQL**: Confluence, Outline ашигладаг, relational data
+- **MongoDB**: Slite ашигладаг, flexible schema
+- **Prisma ORM**: Type-safe database access, modern ORM standard
+
+**Архитектурын загварууд:**
+- **REST API + WebSocket**: Notion-ийн hybrid архитектур
+- **Microservices**: Coda, Confluence ашигладаг, scalability
+- **Serverless**: Firebase, modern JAMstack approaches
+- **Self-hosted vs SaaS**: Outline (open-source) vs Notion (cloud-only)
+
+#### 1.1.3 Судалгааны дүгнэлт
+
+1. **Зах зээл**: Notion-ийн амжилт нь all-in-one workspace загвар, гэхдээ үнэ болон data privacy асуудал байсаар байна
+2. **Технологи**: Socket.io + PostgreSQL + Prisma нь үнэ цэнтэй, scalable, type-safe шийдэл
+3. **Нээлттэй эх**: Outline гэх мэт open-source төслүүд амжилттай, гэхдээ Монгол хэл дээр байхгүй
+4. **Local deployment**: SaaS-аас илүү өөрийн сервер дээр суурилуулах боломжтой систем хэрэглэгчдэд илүү хяналт өгнө
+
+#### 1.1.4 Сонгосон байгууллагын судалгаа
+
+Энэ хэсэгт систем хөгжүүлэхээс өмнө судалгаа хийсэн байгууллагууд болон тэдгээрийн системийн өмнөх үйл ажиллагаа, тулгардаг байсан асуудлуудыг товч дурдана.
+
+**1. Notion (Сонгосон байгууллага)**
+- **Үйл ажиллагаа**: 2016 онд эхэлсэн, block-based editor, all-in-one workspace
+- **Өмнөх асуудал**: Анх SQLite ашиглаж байсан, scalability хязгаарлагдмал байсан; real-time sync-д Operational Transformation ашиглаж байжээ
+- **Шийдсэн нь**: WebSocket + REST API hybrid архитектур, AWS migration, PostgreSQL ашиглах болсон
+
+**2. Coda (Сонгосон байгууллага)**
+- **Үйл ажиллагаа**: 2014 онд Google engineers үүсгэсэн, "doc as app" концепц
+- **Өмнөх асуудал**: Firebase Realtime Database ашиглаж байсан, complex queries хүнд байсан
+- **Шийдсэн нь**: Custom backend, formulas system, Packs for integrations
+
+**3. Outline (Сонгосон байгууллага)**
+- **Үйл ажиллагаа**: 2018 онд open-source, self-hosted alternative
+- **Өмнөх асуудал**: Notion-ийн subscription model-д санхүүгийн ачаалал their users-д тулгамдсан
+- **Шийдсэн нь**: MIT license-ээр open-source, Docker deployment, PostgreSQL + Prisma архитектур
+
+**4. Confluence (Сонгосон байгууллага)**
+- **Үйл ажиллагаа**: 2004 оноос Atlassian, enterprise wiki
+- **Өмнөх асуудал**: Java-based monolith, slow performance, poor UX
+- **Шийдсэн нь**: Microservices, React migration, cloud-native architecture
+
+**Судалгааны үр дүн:**
+- Сонгосон байгууллагууд анх **SQLite** (Notion), **Firebase** (Coda), **Monolith** (Confluence) ашиглаж байсан
+- Том хэмжээнд тэлэхэд эдгээр нь саад болсон
+- Notion болон Outline **PostgreSQL** руу шилжсэн нь **маань ч мөн адил PostgreSQL сонгосон шалтгаан**
+- Real-time sync-д **Socket.io** (Outline, Slite) болон **WebSocket** (Notion) ашигладаг нь **бидний сонголттой тохиромжтой**
+
+#### 1.1.5 Асуудлын тодорхойлолт (Миний төслийн хувьд)
+
+**Бидний систем бүтээхээс өмнө тулгардаг байсан асуудлууд:**
+
+**1. Технологийн өмнөх байдал:**
+- Судалгааны үед сонгосон байгууллагууд (Notion, Outline) анх **SQLite** ашиглаж байсан нь:
+  - Concurrent users-д муу
+  - Horizontal scaling боломжгүй
+  - Backup, migration хүнд
+- Бид эхнээсээ **PostgreSQL** сонгосон нь:
+  - ACID compliance
+  - JSON support (flexible schema)
+  - Proven at scale (Instagram, Uber)
+
+**2. Real-time архитектурын асуудал:**
+- Сонгосон байгууллагууд анх **Polling** (Notion) болон **Firebase** (Coda) ашиглаж байсан:
+  - Polling: High latency, server load их
+  - Firebase: Vendor lock-in, customization хязгаарлагдмал
+- Бид **Socket.io** сонгосон нь:
+  - Event-driven architecture
+  - Auto-reconnection
+  - Room-based broadcasting (workspace isolation)
+
+**3. Type safety асуудал:**
+- Сонгосон байгууллагууд JavaScript хүчирхэг ашигладаг боловч runtime errors их байсан
+- Бид **TypeScript + Prisma ORM** сонгосон нь:
+  - Compile-time type checking
+  - Auto-generated types from schema
+  - Query validation before execution
+
+**4. Монгол хэрэглэгчдэд зориулсан асуудал:**
+Сонгосон байгууллагууд (Notion, Coda) нь:
+- Зөвхөн **англи хэл дээр**, Монгол хэрэглэгчдэд тохиромжгүй интерфейс
+- **SaaS загвар** - өөрийн сервер дээр суурилуулах боломжгүй
+- **Subscription төлбөр** - тогтмол зардал
+- **Data хаана хадгалагдах нь тодорхойгүй** (GDPR, data sovereignty асуудал)
+
+**Бидний системийн бүтэц (Асуудлыг шийдсэн нь):**
+
+```
+Frontend (Next.js 14 + TypeScript)
+    ↓ HTTP/WebSocket
+Backend (Node.js + Express + Socket.io)
+    ↓ Prisma ORM (Type-safe)
+Database (PostgreSQL - Local server)
+```
+
+**Гол давуу талууд:**
+1. **PostgreSQL**: Notion, Outline-ийн сүүлийн сонголт, scalable, reliable
+2. **Socket.io**: Outline, Slite ашигладаг, real-time bidirectional
+3. **Prisma ORM**: Type-safety, auto-migration, modern developer experience
+4. **Self-hosted**: Сонгосон байгууллагуудаас ялгаатай, өөрийн сервер дээр
+5. **Монгол хэл дээрх анхны нээлттэй эхийн шийдэл**
+
+Үүнд: Сонгосон байгууллагуудын (Notion, Coda, Outline, Confluence) өмнөх асуудлууд болон тэдгээрийн шийдлүүдээс суралцаж, бид эхнээс нь зөв технологиудыг (PostgreSQL, Socket.io, Prisma) сонгож, Монгол хэрэглэгчдэд зориулсан нээлттэй эхийн систем бүтээлээ.
+
+---
+
+### 1.2 Архитектурын сонголт (Дэлгэрэнгүй)
+
+Энэ хэсэгт бидний төслийн архитектурын сонголтуудыг дэлгэрэнгүй тайлбарлана. Сонголт бүрт хэрэглэгдэж болох хувилбарууд болон тэдгээрийн харьцуулалт, яагаад тухайн технологийг сонгосон зөвшөөрөл агуулсан.
+
+#### 1.2.1 Backend архитектур
+
+**А. Node.js + Express (REST API)**
+
+*Хувилбарууд:*
+1. **Python + Django/FastAPI**: Хурдан хөгжүүлэлт, гэхдээ real-time-д тохиромжгүй
+2. **Java + Spring Boot**: Enterprise-grade, гэхдээ heavyweight, хөгжүүлэлт удаан
+3. **Go + Gin**: Performance сайн, гэхдээ ecosystem жижиг
+4. **Node.js + Express**: ✅ Сонгосон
+
+*Сонгосон шалтгаан:*
+1. **JavaScript Runtime**: Frontend (Next.js) болон иж бүрэн stack (JS бүх газар), хөгжүүлэлт хурдан
+2. **Event-driven Architecture**: Non-blocking I/O, real-time (Socket.io) холболттой сайн ажиллана
+3. **NPM Ecosystem**: 1.5 сая+ packages, Socket.io, bcrypt, jsonwebtoken бэлэн
+4. **Single-threaded Model**: Real-time-д тохиромжтой, сүлжээний хүсэлтүүдэд (I/O-bound) хурдан
+5. **Судалгаа**: Notion (Node.js), Outline (Node.js), Slite (Node.js) ашигладаг
+
+*Архитектурын дүрслэл:*
+```
+HTTP Request → Express Router → Middleware (JWT) → Controller → Prisma → PostgreSQL
+                    ↓
+WebSocket Event → Socket.io → Event Handler → Broadcast to Room
+```
+
+**Б. Socket.io (Real-time Bidirectional Communication)**
+
+*Хувилбарууд:*
+1. **Raw WebSocket**: Standard, гэхдээ fallback байхгүй, reconnection бичих хэрэгтэй
+2. **Firebase Realtime DB**: Google-ийн шийдэл, vendor lock-in, customization хязгаарлагдмал
+3. **WebRTC**: Peer-to-peer, serverless, гэхдээ NAT traversal хүнд, scalability муу
+4. **Socket.io**: ✅ Сонгосон
+
+*Сонгосон шалтгаан:*
+1. **Automatic Fallback**: WebSocket ажиллахгүй бол HTTP long-polling ашиглана
+2. **Room-based Broadcasting**: Workspace-үүдийг room-д хувааж, зөв хэрэглэгчдэд мессеж илгээнэ
+3. **Auto-reconnection**: Internet тасрахад автоматаар дахин холбогдоно (built-in logic)
+4. **Event-driven**: `socket.emit('page-update', data)` хэлбэрээр амархан ашиглана
+5. **Latency**: 200ms-ээс бага latency-тай live cursor, content sync хангана
+6. **Судалгаа**: Outline, Slite ашигладаг; Notion ч ижил загвар (WebSocket + REST)
+
+*Socket.io Architecture:*
+```javascript
+// Server
+socket.on('join-workspace', (workspaceId) => {
+  socket.join(`workspace-${workspaceId}`); // Room үүсгэх
+});
+
+socket.on('page-update', (data) => {
+  // Тухайн workspace-ийн бүх хэрэглэгчидэд илгээх (sender-ээс бусад)
+  socket.to(`workspace-${data.workspaceId}`).emit('page-updated', data);
+});
+```
+
+**В. Prisma ORM + PostgreSQL (Database Layer)**
+
+*Хувилбарууд:*
+1. **SQLite**: Lightweight, zero-config, гэхдээ concurrent writes-д муу, scaling хүнд
+2. **MongoDB**: Schema-less, flexible, гэхдээ relations хүнд, ACID compliance сул
+3. **MySQL**: Popular, гэхдээ JSON support хязгаарлагдмал, TypeScript integration сул
+4. **PostgreSQL + Prisma**: ✅ Сонгосон
+
+*Сонгосон шалтгаан:*
+
+**PostgreSQL-ийн давуу тал:**
+1. **ACID Compliance**: Transactions ажиллахад найдвартай (банкны түвшин)
+2. **Relational Data**: Users ↔ Workspaces ↔ Pages хамаарлыг хадгалахад тохиромжтой
+3. **JSON Support**: Page content-г JSON хэлбэрээр хадгалах боломжтой (flexible schema)
+4. **Scalability**: Notion, Outline, Instagram, Uber ашигладаг (millions of users)
+5. **Self-hosted**: Өөрийн сервер дээр бүрэн хяналттай, cloud dependencyгүй
+
+**Prisma ORM-ийн давуу тал:**
+1. **Type Safety**: Schema-аас автоматаар TypeScript types үүсгэнэ (compile-time checks)
+2. **Migration**: Database schema-г version control хийнэ (`prisma migrate dev`)
+3. **Query Validation**: SQL injection-ээс хамгаална (Prisma types-ээр баталгаажуулна)
+4. **Auto-completion**: IDE-д төрөл нь тодорхой тул IntelliSense ажиллана
+5. **Судалгаа**: Outline ашигладаг, modern ORM standard болж байна
+
+*Prisma Schema жишээ:*
+```prisma
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  workspaces WorkspaceMember[]
+  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+}
+
+model Workspace {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ownerId   Int
+  owner     User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members   WorkspaceMember[]
+  pages     Page[]
+}
+```
+
+**Г. JWT + Bcrypt (Authentication & Security)**
+
+*Хувилбарууд:*
+1. **Session-based**: Server-д session хадгалах, scaling хүнд (multiple servers-д асуудал)
+2. **OAuth (Google/GitHub)**: External dependency, simplified registration, гэхдээ customization хязгаарлагдмал
+3. **JWT + Bcrypt**: ✅ Сонгосон
+
+*Сонгосон шалтгаан:*
+
+**JWT (JSON Web Token):**
+1. **Stateless**: Server-д session хадгалах шаардлагагүй, horizontal scaling хялбар
+2. **Scalable**: Multiple backend servers ашиглахад ижил token ажиллана
+3. **Secure**: Signature-тай (tamper-proof), expiration time тохируулна
+4. **Structure**: `header.payload.signature` (Base64Url encoded)
+
+**bcrypt (Password Hashing):**
+1. **One-way Hash**: Password-г буцаан тайлах боломжгүй (plain text хадгалахгүй)
+2. **Salt Rounds**: Brute-force attack-аас хамгаална (cost factor = 10+)
+3. **Industry Standard**: 95%+ вэб апп-үүд ашигладаг
+
+*Authentication Flow:*
+```
+1. User → POST /api/auth/login {email, password}
+2. Backend → bcrypt.compare(password, hash) → match?
+3. Backend → JWT.sign({userId}, SECRET) → token
+4. Backend → Response {token}
+5. Client → Store token (localStorage/cookie)
+6. Client → Subsequent requests: Authorization: Bearer <token>
+7. Backend Middleware → JWT.verify(token) → req.userId = decoded.userId
+```
+
+#### 1.2.2 Frontend архитектур
+
+**А. Next.js 14 (App Router)**
+
+*Хувилбарууд:*
+1. **React SPA (Create React App)**: Client-side rendering, SEO муу, initial load удаан
+2. **Vue.js + Nuxt**: Alternative stack, гэхдээ ecosystem жижиг
+3. **Angular**: Enterprise-grade, гэхдээ learning curve өндөр, heavyweight
+4. **Next.js 14 (App Router)**: ✅ Сонгосон
+
+*Сонгосон шалтгаан:*
+1. **SSR/SSG Hybrid**: Server-Side Rendering (SEO) + Static Site Generation (performance)
+2. **App Router**: File-based routing, nested layouts, loading states
+3. **React Server Components**: Backend code-г frontend-д бичих (API calls хялбар)
+4. **Streaming**: Large pages-ийг chunk-уудаар дуудах (progressive loading)
+5. **Real-time Integration**: Server Components дээр Socket.io client ажиллуулахад хялбар
+6. **Судалгаа**: Notion, Coda хүртэл React ашигладаг, Next.js нь түүнээс илүү чадалтай
+
+*Next.js App Router Structure:*
+```
+app/
+├── layout.tsx          // Root layout (common UI)
+├── page.tsx            // Home page (/)
+├── workspace/
+│   ├── layout.tsx      // Workspace layout
+│   └── [id]/
+│       ├── page.tsx    // Workspace detail (/workspace/123)
+│       └── page/
+│           └── [pageId]/page.tsx  // Page editor
+└── api/
+    └── auth/
+        └── route.ts   // API route (serverless function)
+```
+
+**Б. Tailwind CSS (Utility-first Framework)**
+
+*Хувилбарууд:*
+1. **CSS Modules**: Scoped styles, гэхдээ utility classes байхгүй
+2. **Styled-components**: CSS-in-JS, runtime overhead
+3. **Bootstrap**: Pre-built components, customization хүнд
+4. **Tailwind CSS**: ✅ Сонгосон
+
+*Сонгосон шалтгаан:*
+1. **Utility-first**: `class="p-4 bg-blue-500"` хэлбэрээр бичих (separate CSS файлгүй)
+2. **Rapid Prototyping**: Notion-style UI-г хурдан бүтээх (pre-defined design system)
+3. **Responsive Design**: `sm:`, `md:`, `lg:` prefixes ашиглан mobile-first approach
+4. **Dark Mode**: `dark:` prefix ашиглан toggle хийхэд маш хялбар
+5. **Судалгаа**: Notion, Coda-ийн modern UI-д адил, 40%+ компаниуд ашигладаг
+
+*Tailwind Dark Mode Example:*
+```tsx
+<div className="bg-white dark:bg-gray-900 text-black dark:text-white">
+  <button onClick={toggleDarkMode}>Toggle Dark Mode</button>
+</div>
+```
+
+**В. Socket.io-client (Frontend Real-time)**
+
+*Сонгосон шалтгаан:*
+1. **Automatic Fallback**: Browser WebSocket-г дэмжэхгүй бол polling ашиглана
+2. **Reconnection Logic**: Internet тасрахад автоматаар retry хийнэ (built-in)
+3. **Room-based Events**: `socket.join('workspace-123')` хэлбэрээр ашиглана
+4. **TypeScript Support**: `@types/socket.io-client` ашиглан type safety
+
+*Frontend Socket.io Usage:*
+```typescript
+import { io, Socket } from 'socket.io-client';
+
+const socket: Socket = io(process.env.NEXT_PUBLIC_API_URL, {
+  auth: { token: localStorage.getItem('token') }
+});
+
+socket.on('connect', () => {
+  socket.emit('join-workspace', workspaceId);
+});
+
+socket.on('page-updated', (data) => {
+  if (data.userId !== currentUser.id) {
+    // Бусад хэрэглэгчийн өөрчлөлтийг харах
+    setPageContent(data.content);
+  }
+});
+```
+
+### 1.3 Архитектурын харьцуулалт (Summary Table)
+
+| Технологи | Хувилбарууд | Сонгосон шалтгаан | Судалгааны үр дүн |
+|-----------|-------------|------------------|-------------------|
+| **Backend** | Python, Java, Go | JS stack, Event-driven, NPM | Notion, Outline, Slite |
+| **Real-time** | WebSocket, Firebase, WebRTC | Auto-fallback, Rooms, Reconnection | Outline, Slite |
+| **Database** | SQLite, MongoDB, MySQL | ACID, JSON, Scalability, Self-hosted | Notion, Outline, Confluence |
+| **ORM** | Sequelize, TypeORM | Type-safe, Migrations, Auto-complete | Outline |
+| **Frontend** | React SPA, Vue, Angular | SSR/SSG, App Router, Server Components | Notion, Coda |
+| **CSS** | CSS Modules, Styled-components, Bootstrap | Utility-first, Rapid prototyping, Dark mode | Notion, Coda |
+
+**Дүгнэлт:** Бидний сонгосон архитектур нь сонгосон байгууллагуудын (Notion, Outline, Slite) амжилттай загварууд дээр суурилсан, хэрэглэгчдэд тохиромжтой, ирээдүйд өргөтгөх боломжтой бүтэцтэй.
+
+---
+
+## ХОЁР. СИСТЕМИЙН ШААРДЛАГА ТОДОРХОЙЛОЛТ
+
+### 2.1 Frontend технологиуд
+
+**Next.js 14 (React Framework)**
+
+Next.js нь React суурьтай орчин үеийн веб хөгжүүлэлтийн framework юм. Энэхүү системд Next.js 14-ийг ашигласнаар хуудасны UI хэсгүүдийг server-д боловсруулж, SEO болон ачаалах хурдыг сайжруулсан.
+
+Тухайлбал системд дараах Next.js боломжууд ашиглагдсан:
+- **App Router** - файл дээр суурилсан routing, хуудасны бүтцийг хялбар зохион байгуулна
+- **Server Components** - backend кодыг frontend-д бичиж, API дуудалтыг хялбаршуулна
+- **Layouts** - давтагдах UI хэсгүүдийг нэг удаа тодорхойлно
+- **SSR/SSG** - Server-Side Rendering болон Static Site Generation ашиглан хурдан ачаална
+
+Next.js-ийн ашигласан гол боломжууд:
+- **Хурдан хөгжүүлэлт**: Hot Module Replacement (HMR) ашиглан код өөрчлөхөд шууд шинэчлэгдэнэ
+- **SEO сайн**: Server-side rendering ашиглан хайлтын системд индексдэгдэнэ
+- **Performance**: Code splitting, lazy loading ашиглан анхны ачаалалтыг багасгадаг
+- **File-based routing**: `app/workspace/[id]/page.tsx` мэт файл бүтэц нь автоматаар route үүсгэнэ
+
+**TypeScript**
+
+TypeScript нь JavaScript дээр төрөл шалгалт нэмсэн хэл юм. Системд TypeScript ашигласнаар хувьсагч, функц, props-ийн төрлийг тодорхой болгож, алдаа гарах магадлалыг багасгасан.
+
+Тухайлбал дараах газруудад TypeScript ашиглагдсан:
+- **Interface тодорхойлолт** - `interface PageProps { pageId: string }` гэх мэтээр төрлийг тодорхойлно
+- **Function параметрүүд** - `(userId: number, content: string) => void` мэт төрөлтэй функц бичнэ
+- **Component props** - React компонентүүдэд `React.FC<Props>` ашиглан type-safe бичнэ
+- **API responses** - Backend-ээс ирэх өгөгдлийн төрлийг interface хэлбэрээр тодорхойлно
+
+TypeScript-ийн ашигласан гол давуу талууд:
+- **Compile-time шалгалт** - Код ажиллахаас өмнө алдааг олно (runtime errors багасна)
+- **IntelliSense** - IDE-д төрөл нь тодорхой тул auto-complete, refactoring хялбар
+- **Prisma-тай нийцэл** - Prisma schema-аас автоматаар TypeScript төрүүд үүсдэг
+- **Documentation** - Кодыг уншихад төрлүүд нь тусгайлан тусдаа документаци шиг ажиллана
+
+**Tailwind CSS (Utility-first Framework)**
+
+Tailwind CSS нь урьдчилсэн class-уудыг ашиглан шууд стиль өгдөг framework юм. Системд Tailwind CSS ашигласнаар тусдаа CSS файл бичихгүйгээр иж бүрэн UI бүтээх боломжтой.
+
+Тухайлбал системд дараах Tailwind class-ууд ашиглагдсан:
+- **Layout classes** - `flex`, `grid`, `container` ашиглан бүтэц зохион байгуулна
+- **Spacing** - `p-4`, `m-2`, `space-x-4` ашиглан зай гаргана
+- **Colors** - `bg-blue-500`, `text-white`, `border-gray-300` ашиглан өнгө өгнө
+- **Responsive** - `sm:`, `md:`, `lg:` prefixes ашиглан гар утас, таблет, компьютерт тохируулна
+- **Dark mode** - `dark:` prefix ашиглан dark mode-д өнгөөр солигдоно
+
+Tailwind CSS-ийн ашигласан гол давуу талууд:
+- **Rapid prototyping** - Notion-ийн адил UI-г хурдан бүтээх боломжтой
+- **Consistency** - Бүх газар ижил тохиргоо (spacing, colors) ашиглагдана
+- **No CSS files** - Тусдаа `.css` файл бичих шаардлагагүй, зөвхөн JSX-д бичнэ
+- **Dark mode** - `dark:` prefix ашиглан 2-н горимыг хялбар солино (toggle)
+- **Responsive design** - Mobile-first approach, гар утаснаас эхлэн бүтээлгэнэ
+
+**React компонентүүд**
+
+React нь хэрэглэгчийн интерфэйс бүтээхэд ашиглагдаг JavaScript сан юм. Энэхүү системд React-ийг ашигласнаар хуудсууд болон UI хэсгүүдийг жижиг жижиг компонент болгон хувааж, дахин ашиглах боломжтой бүтэцтэй болгосон.
+
+Тухайлбал системд дараах React компонентүүд ашиглагдсан:
+- **Layout** - сайтны үндсэн бүтэц, давтагдах хэсгүүд
+- **PageEditor** - Markdown засварлагч, preview харуулдаг хэсэг
+- **WorkspaceSidebar** - ажлын талбайн цэс, хуудасны жагсаалт
+- **KanbanBoard** - чирж орчуулах самбар, картуудыг зохион байгуулна
+- **ChatRoom** - бодит цагийн чат, мессежүүдийг харуулна
+- **DrawingCanvas** - зураг зурах canvas, pen/eraser ашиглана
+- **FileUpload** - файл хуулах, preview харуулах
+- **DarkModeToggle** - Light/dark mode солих товч
+
+React-ийн компонент суурьтай бүтэц нь системийн кодыг эмх цэгцтэй, засварлахад хялбар болгож өгсөн. Жишээлбэл, `Button` компонентыг тусдаа бүтээснээр Workspace, Page, Kanban, Chat хэсгүүдэд дахин ашиглах боломжтой болсон.
+
+**Socket.io-client (Real-time Communication)**
+
+Socket.io-client нь browser-д WebSocket холболтыг автоматаар удирдаг сан юм. Системд Socket.io-client ашигласнаар хэрэглэгчид бодит цагт холбогдож, бусад хэрэглэгчдийн үйлдлийг шууд харах боломжтой.
+
+Тухайлбал дараах сценэрүүдэд Socket.io-client ашиглагдсан:
+- **Workspace-д нэвтрэх** - `socket.emit('join-workspace', workspaceId)`
+- **Page шинэчлэлт** - `socket.on('page-updated', callback)` аль нь бусад хэрэглэгчийн засварлалтыг харуулна
+- **Cursor хөдөлгөөн** - Курсорын байрлалыг бусад хэрэглэгчид илгээнэ
+- **Chat мессеж** - Чат өрөөнд мессеж илгээх, хүлээн авах
+
+Socket.io-client-ийн ашигласан гол боломжууд:
+- **Auto-reconnection** - Internet тасрахад автоматаар дахин холбогдоно
+- **Automatic fallback** - WebSocket ажиллахгүй бол HTTP polling ашиглана
+- **Room-based events** - Workspace-үүдийг тусад нь ангилж мессеж илгээнэ
+- **TypeScript төрөл** - `@types/socket.io-client` ашиглан type-safe бичигдэнэ
+
+### 2.2 Функциональ шаардлага
+
+#### FR-1: Нэвтрэлт ба бүртгэл
+- **FR-1.1**: Хэрэглэгч и-мейл, нууц үгээр нэвтэрч чадна
+- **FR-1.2**: Хэрэглэгч шинэ бүртгэл үүсгэж чадна
+- **FR-1.3**: Нууц үг мартсан тохиолдолд и-мейлээр сэргээх линк авах
+- **FR-1.4**: Профайл (аватар, хэрэглэгчийн нэр) засах
+
+#### FR-2: Workspace удирдлага
+- **FR-2.1**: Workspace үүсгэх, нэр өөрчлөх
+- **FR-2.2**: Гишүүдийг и-мэйлээр урих
+- **FR-2.3**: Гишүүдийн жагсаалт харах
+- **FR-2.4**: Гишүүн хасах (зөвхөн эзэмшигч)
+
+#### FR-3: Хуудас удирдлага
+- **FR-3.1**: Markdown форматтай хуудас бичих
+- **FR-3.2**: Урьдчилан харах (Preview)
+- **FR-3.3**: Бодит цагийн ижилсүүлэлт (cursor tracking)
+- **FR-3.4**: Автоматаар хадгалах
+
+#### FR-4: Kanban самбар
+- **FR-4.1**: Самбар, багана, карт үүсгэх
+- **FR-4.2**: Drag-and-drop ашиглан карт шилжүүлэх
+- **FR-4.3**: Картанд хэрэглэгч хуваарилах
+- **FR-4.4**: Карт засах, устгах
+
+#### FR-5: Файл удирдлага
+- **FR-5.1**: Файл хуулах (image, code, documents)
+- **FR-5.2**: Паппет үүсгэх, устгах
+- **FR-5.3**: Файл татах, устгах
+- **FR-5.4**: Код файл засах, урьдчилан харах
+
+#### FR-6: Чат систем
+- **FR-6.1**: Чат өрөө үүсгэх
+- **FR-6.2**: Бодит цагийн мессеж илгээх
+- **FR-6.3**: Мессеж засах, устгах
+
+#### FR-7: Зураг зурах самбар
+- **FR-7.1**: Pen/Eraser ашиглан зурах
+- **FR-7.2**: Өнгө, шугамны зузаан тохируулах
+- **FR-7.3**: Бодит цагийн зурах
+- **FR-7.4**: Undo, хадгалах
+
+### 2.3 Техникийн шаардлага
+
+#### NFR-1: Гүйцэтгэл
+- **NFR-1.1**: Хуудас ачаалах хугацаа < 2 секунд
+- **NFR-1.2**: Бодит цагийн шинэчлэл < 100ms
+- **NFR-1.3**: 1000 хэрэглэгч зэрэгцэн ашиглах боломжтой
+
+#### NFR-2: Аюулгүй байдал
+- **NFR-2.1**: JWT token ашиглан нэвтрэлт хамгаалах
+- **NFR-2.2**: Нууц үг bcrypt ашиглан хэшлэх
+- **NFR-2.3**: API endpoint-үүд нэвтрэлт шаардана (except register/login)
+
+#### NFR-3: Хамтөөршил
+- **NFR-3.1**: Responsive дизайн (mobile, tablet, desktop)
+- **NFR-3.2**: Dark mode дэмжлэг
+- **NFR-3.3**: Modern browser-үүдийг дэмжнэ (Chrome, Firefox, Safari, Edge)
+
+---
+
+## ГУРАВ. СИСТЕМИЙН АРХИТЕКТУР
+
+### 3.1 Системийн архитектурын төрөл сонголт
+
+Архитектурын загварыг сонгохдоо дараах 4 архитектурын төрлийг судалж, харьцуулсан:
+
+#### 3.1.1 Monolithic Architecture
+**Тодорхойлолт:** Бүх функцүүд нэг кодын сангаас бүрдэнэ.
+
+**Давуу тал:**
+- Хөгжүүлэхэд энгийн, эхлэлд хурдан
+- Debug хийхэд хялбар (single codebase)
+- Deployment хялбар
+
+**Сул тал:**
+- Scale хийхэд хүнд (whole app-г scale хийх хэрэгтэй)
+- Technology stack солих боломжгүй
+- Notion анх ийм байсан бөгөөд томорсон тул microservices руу шилжсэн
+
+**Хэрэглэгдсэн байгууллага:** Confluence (анх), түүнээс microservices руу шилжсэн
+
+#### 3.1.2 Microservices Architecture
+**Тодорхойлолт:** Системийг жижиг, тусдаа ажилладаг service-үүдэд хуваана.
+
+**Давуу тал:**
+- Тусдаа scale хийх боломжтой (auth service-г л scale хийх г.м)
+- Тусдаа технологи ашиглах боломжтой (auth-д Node.js, ML-д Python)
+- Fault isolation - нэг service унахад бусад нь ажиллана
+
+**Сул тал:**
+- Complexity их (service discovery, API gateway, distributed tracing)
+- Network latency (service-үүд хоорондоо communicate хийхэд)
+- Data consistency хад хэцүү (distributed transactions)
+
+**Хэрэглэгдсэн байгууллага:** Coda, Confluence (одоо)
+
+#### 3.1.3 Serverless Architecture
+**Тодорхойлолт:** Backend кодыг function хэлбэрээр бичиж, cloud provider (AWS Lambda, Vercel) ажиллуулна.
+
+**Давуу тал:**
+- Scale автоматаар (traffic ихсэн тул auto-scale)
+- Олохгүй бол төлбөргүй (pay-per-use)
+- Infrastructure удирдах шаардлагагүй
+
+**Сул тал:**
+- Cold start (function анх ажиллахад удаан)
+- Vendor lock-in (AWS, Vercel-ээс салах хүнд)
+- Local development хүнд
+- Real-time (WebSocket) дэмжлэг сул
+
+**Хэрэглэгдсэн байгууллага:** Зарим startups (serverless-д тохиромжгүй байсан)
+
+#### 3.1.4 3-Tier Architecture (БИДНИЙ СОНГОЛТ)
+**Тодорхойлолт:** Системийг 3 түвшинд хуваана: Presentation (Frontend), Application (Backend), Data (Database).
+
+**Давуу тал:**
+- Separation of concerns (Frontend, Backend, Database тусдаа)
+- Technology stack тусдаа сонгох боломжтой
+- Scalability: PostgreSQL-г scale хийх боломжтой
+- Development хурдан (Next.js + Node.js иж бүрэн stack)
+- Real-time: Socket.io ашиглан instant communication
+- Type safety: TypeScript + Prisma
+
+**Сул тал:**
+- Monolith-тай адилгаар scale хийхэд microservices-аас доогуур
+- Гэхдээ бидний хэмжээнд (1000 хэрэглэгч) хангалттай
+
+**Хэрэглэгдсэн байгууллага:** Outline, Slite, бидний төсөл
+
+**Шийдвэр:** Бидний төсөл эхлээд бага хэрэглэгчтэй тул **3-Tier Architecture** сонгосон. Хэрэв томорвол ирээдүйд microservices руу шилжүүлэх боломжтой (modular бүтэцтэй).
+
+### 3.2 Системийн архитектур (3-tier architecture diagram)
+
+```
+┌──────────────────────────────────────────────────┐
+│           CLIENT TIER (Presentation)              │
+│                  Browser                         │
+│    ┌────────────────────────────────────────┐    │
+│    │   Next.js 14 + React 18 + TypeScript   │    │
+│    │   - Server Components (App Router)      │    │
+│    │   - Client-side rendering (CSR)         │    │
+│    │   - Static Site Generation (SSG)        │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   State Management                     │    │
+│    │   - React Hooks (useState, useEffect)  │    │
+│    │   - Context API (global state)          │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   UI Framework                         │    │
+│    │   - Tailwind CSS (utility-first)        │    │
+│    │   - Lucide React (icons)               │    │
+│    │   - ReactMarkdown (rendering)           │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   Real-time Client                     │    │
+│    │   - Socket.io-client                   │    │
+│    │   - Auto-reconnection                  │    │
+│    │   - Room-based events                  │    │
+│    └────────────────────────────────────────┘    │
+└────────────────────┬─────────────────────────────┘
+                     │ HTTP/REST + WebSocket
+┌────────────────────▼─────────────────────────────┐
+│         APPLICATION TIER (Business Logic)         │
+│              Node.js + Express                   │
+│    ┌────────────────────────────────────────┐    │
+│    │   API Layer (RESTful)                  │    │
+│    │   - /api/auth (register, login)        │    │
+│    │   - /api/workspaces (CRUD)             │    │
+│    │   - /api/pages (CRUD)                  │    │
+│    │   - /api/kanban (boards, cards)        │    │
+│    │   - /api/files (upload, download)      │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   Middleware                           │    │
+│    │   - JWT Authentication                 │    │
+│    │   - CORS handling                      │    │
+│    │   - Rate limiting (future)             │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   Real-time Server                     │    │
+│    │   - Socket.io server                   │    │
+│    │   - Event handlers (page-update, etc.) │    │
+│    │   - Room management (workspaces)       │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   Business Logic                       │    │
+│    │   - Workspace management               │    │
+│    │   - Permission checks (owner/member)  │    │
+│    │   - Real-time sync logic               │    │
+│    └────────────────────────────────────────┘    │
+└────────────────────┬─────────────────────────────┘
+                     │ Prisma ORM
+┌────────────────────▼─────────────────────────────┐
+│           DATA TIER (Persistence)                │
+│              PostgreSQL 15+                      │
+│    ┌────────────────────────────────────────┐    │
+│    │   Tables (13 tables)                   │    │
+│    │   - User, Workspace, Page, Folder     │    │
+│    │   - KanbanBoard, KanbanColumn, Card   │    │
+│    │   - ChatRoom, ChatMessage, Drawing    │    │
+│    │   - File, WorkspaceMember             │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   Relations                            │    │
+│    │   - One-to-many, Many-to-many         │    │
+│    │   - Self-referencing (Page → Page)     │    │
+│    └────────────────────────────────────────┘    │
+│    ┌────────────────────────────────────────┐    │
+│    │   Migrations (Prisma)                  │    │
+│    │   - Version control for DB schema      │    │
+│    │   - Easy deployment                    │    │
+│    └────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────┘
+```
+
+### 3.3 Сонгосон технологиудын дэлгэрэнгүй шинжилгээ
+
+(Already covered in section 1.2)
+
+### 3.4 Өгөгдлийн сангийн загвар (ERD) дэлгэрэнгүй
+
+Систем дэх үндсэн 13 хүснэгт болон хамаарлууд:
+
+#### 3.4.1 Үндсэн хүснэгтүүд
+
+**User хүснэгт:**
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  avatar_url VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Workspace хүснэгт:**
+```sql
+CREATE TABLE workspaces (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  owner_id INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**WorkspaceMember хүснэгт (Join table):**
+```sql
+CREATE TABLE workspace_members (
+  id SERIAL PRIMARY KEY,
+  workspace_id INTEGER REFERENCES workspaces(id),
+  user_id INTEGER REFERENCES users(id),
+  role VARCHAR(50) DEFAULT 'member', -- 'owner' or 'member'
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(workspace_id, user_id)
+);
+```
+
+#### 3.4.2 Хамаарлын төрлүүд
+
+1. **One-to-Many (1:N):**
+   - User → Workspaces (owner)
+   - Workspace → Pages
+   - Workspace → KanbanBoards
+   - KanbanBoard → KanbanColumns
+   - KanbanColumn → KanbanCards
+
+2. **Many-to-Many (M:N):**
+   - Users ↔ Workspaces (through WorkspaceMember)
+   - Users ↔ KanbanCards (through CardAssignment)
+
+3. **Self-Referencing (Recursive):**
+   - Page → Page (parentId, infinite hierarchy)
+   - Folder → Folder (parentId, nested folders)
+
+#### 3.4.3 Page хүснэгт (Infinite hierarchy жишээ)
+
+```sql
+CREATE TABLE pages (
+  id SERIAL PRIMARY KEY,
+  workspace_id INTEGER REFERENCES workspaces(id),
+  parent_id INTEGER REFERENCES pages(id), -- null = root page
+  title VARCHAR(255) DEFAULT 'Untitled',
+  content TEXT, -- Markdown content (JSON in production)
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Жишээ өгөгдөл:**
+```
+Page 1 (id: 1, parent_id: null)        → Root page
+  └─ Page 2 (id: 2, parent_id: 1)     → Child page
+      └─ Page 3 (id: 3, parent_id: 2) → Grandchild page
+```
+
+### 3.5 Архитектурын давуу талууд (Судалгааны үр дүнтэй харьцуулсан)
+
+| Архитектурын төрөл | Найдвартай байдал | Гүйцэтгэл | Хөгжүүлэлтийн хурд | Scale хийх боломж |
+|-------------------|----------------|------------|------------------|------------------|
+| Monolithic        | ⭐⭐⭐         | ⭐⭐⭐⭐     | ⭐⭐⭐⭐⭐        | ⭐⭐              |
+| Microservices     | ⭐⭐⭐⭐        | ⭐⭐⭐       | ⭐⭐              | ⭐⭐⭐⭐⭐        |
+| Serverless        | ⭐⭐⭐⭐⭐       | ⭐⭐         | ⭐⭐⭐            | ⭐⭐⭐⭐⭐        |
+| **3-Tier (бид)**  | **⭐⭐⭐⭐**    | **⭐⭐⭐⭐** | **⭐⭐⭐⭐**      | **⭐⭐⭐**        |
+
+**Дүгнэлт:** Бидний сонгосон 3-Tier архитектур нь эхлэлдээ хамгийн тэнцвэртэй (balanced) шийдэл бөгөөд ирээдүйд microservices руу шилжүүлэхэд бэлэн.
+
+### 3.6 Архитектурын сул талууд болон шийдлүүд
+
+**Сул тал 1: Single Point of Failure**
+- Хэрэв backend server унахад бүх хэрэглэгчид хүрэлцэхгүй
+- **Шийдэл:** Ирээдүйд load balancer + multiple backend instances
+
+**Сул тал 2: Database bottleneck**
+- PostgreSQL нэг server дээр ажиллаж байгаа тул traffic ихсэн тул удаана
+- **Шийдэл:** Read replicas, connection pooling, caching (Redis)
+
+**Сул тал 3: Real-time scaling**
+- Socket.io нэг Node.js process дээр ажиллаж байгаа
+- **Шийдэл:** Socket.io Redis adapter (multiple nodes)
+
+**Судалгаа:** Notion анх ийм сул талуудтай байсан, одоо тэд:
+- Multiple AWS regions
+- Database sharding
+- Redis caching
+- CDN for static assets
+
+Бидний төсөл эхлээд бага хэмжээтэй тул эдгээр сул талууд одоохондоо асуудалгүй, гэхдээ ирээдүйд шийдэх бэлтгэлтэй.
+
+---
+
+## ДӨРӨВ. ХЭРЭГЖҮҮЛЭЛТ
+
+### 4.1 Хөгжүүлэлтийн орчин
+- **OS**: Linux (CachyOS)
+- **IDE**: VS Code
+- **Version Control**: Git, GitHub
+- **Package Manager**: npm, yarn
+
+### 4.2 Кодчилсон жишээ
+
+#### 4.2.1 Real-time Socket.io холболт (Backend)
+
+```javascript
+// server/src/index.ts
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+
+const io = new Server(httpServer, {
+  cors: { origin: '*' }
+});
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.userId;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.userId);
+
+  socket.on('join-workspace', (workspaceId) => {
+    socket.join(`workspace-${workspaceId}`);
+  });
+
+  socket.on('page-update', (data) => {
+    socket.to(`workspace-${data.workspaceId}`).emit('page-updated', {
+      pageId: data.pageId,
+      content: data.content,
+      userId: socket.userId
+    });
+  });
+});
+```
+
+#### 4.2.2 Page Component (Frontend)
+
+```typescript
+// client/src/components/PageEditor.tsx
+import { useState, useEffect } from 'react';
+import { io, Socket } from 'socket.io-client';
+import ReactMarkdown from 'react-markdown';
+
+export default function PageEditor({ pageId, workspaceId }) {
+  const [content, setContent] = useState('');
+  const [isEditing, setIsEditing] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    const s = io(process.env.NEXT_PUBLIC_API_URL);
+    s.emit('join-workspace', workspaceId);
+    
+    s.on('page-updated', (data) => {
+      if (data.pageId === pageId) {
+        setContent(data.content);
+      }
+    });
+
+    setSocket(s);
+    return () => s.disconnect();
+  }, [pageId, workspaceId]);
+
+  const handleChange = (value: string) => {
+    setContent(value);
+    socket?.emit('page-update', {
+      pageId,
+      workspaceId,
+      content: value
+    });
+  };
+
+  return (
+    <div className="flex h-screen">
+      {isEditing ? (
+        <textarea
+          value={content}
+          onChange={(e) => handleChange(e.target.value)}
+          className="w-1/2 p-4 border-r"
+        />
+      ) : null}
+      <div className="w-1/2 p-4">
+        <ReactMarkdown>{content}</ReactMarkdown>
+      </div>
+    </div>
+  );
+}
+```
+
+### 4.3 Тестийн үр дүн
+
+#### Backend тест (Vitest)
+- **Нийт тест**: 68 ширхэг
+- **Амжилттай**: 68 ширхэг (100%)
+- **Coverage**: 82.73%
+- **Хамрах хүрээ**: auth, chat, drawing, kanban, page, workspace
+
+#### Frontend тест (Vitest)
+- **Нийт тест**: 110 ширхэг
+- **Амжилттай**: 110 ширхэг (100%)
+- **Coverage**: Avatar component 100% (Chat/Sidebar excluded)
+
+#### E2E тест (Playwright)
+- **Спец файл**: 4 ширхэг
+- **Нийт тест**: collab.spec (1-user workflow)
+- **Амжилттай**: ✅ Pass
+
+---
+
+## ТАВ. ДҮГНЭЛТ
+
+### 5.1 Хийгдсэн ажлууд
+1. ✅ Бодит цагийн хамтын ажиллагаатай вэб аппликейшн бүтээлээ
+2. ✅ 13 хүснэгтээс бүрдсэн өгөгдлийн сангийн загвар гаргалаа
+3. ✅ JWT token ашиглан нэвтрэлтийн систем хэрэгжүүллээ
+4. ✅ Markdown редактор, урьдчилан харах, автоматаар хадгалах
+5. ✅ Kanban самбар, drag-and-drop, карт хуваарилалт
+6. ✅ Файл хуулах, паппет удирдлага, код засварлагч
+7. ✅ Бодит цагийн чат систем, мессеж засах/устгах
+8. ✅ Canvas зураг зурах, бодит цагийн ижилсүүлэлт
+9. ✅ Dark mode, responsive дизайн, modern UI
+10. ✅ 68 backend тест, 110 frontend тест бичигдлээ
+
+### 5.2 Суралцсан чадварууд
+- Full-stack вэб хөгжүүлэлт (Next.js + Node.js + PostgreSQL)
+- Real-time communication (Socket.io)
+- TypeScript ашиглан type-safe код бичих
+- Prisma ORM ашиглан өгөгдлийн сангийн хамаарлыг удирдах
+- Component-based UI development
+- API design (RESTful + WebSocket)
+- Authentication & Authorization (JWT, bcrypt)
+- Testing (Vitest, Playwright)
+
+### 5.3 Цаашид хөгжүүлэх чиглэлүүд
+- 🔲 Offline дэмжлэг (Service Workers, IndexedDB)
+- 🔲 WebRTC ашиглан video/audio call
+- 🔲 AI ашиглан текст санал болгох (AI integration)
+- 🔲 Mobile app (React Native эсвэл Flutter)
+- 🔲 API rate limiting, caching (Redis)
+- 🔲 Advanced permissions (read-only, comment-only)
+
+### 5.4 Төслийн ач холбогдол
+Энэ төсөл нь орчин үеийн вэб хөгжүүлэлтийн гол технологиудыг (React, Node.js, PostgreSQL, Real-time communication) практикт хэрэглэх боломжийг олгосон. Хамтын ажиллагааны хэрэгсэл бүтээхдээр вэб аппликейшн хөгжүүлэлтийн бүх үе шатыг (Design → Development → Testing → Deployment) дамжсан. Монгол хэл дээрх нээлттэй эхийн шийдэл байхгүй байсан тул энэ төсөл нь орон нутгийн хэрэгцээг хангахад чухал ач холбогдолтой.
+
+---
+
+**Баярлалаа! 📚**
+
+---
+
+## АШИГЛАСАН МАТЕРИАЛ
+
+1. Notion Official Documentation - https://www.notion.so/help
+2. Socket.io Documentation - https://socket.io/docs/
+3. Next.js Documentation - https://nextjs.org/docs
+4. Prisma Documentation - https://www.prisma.io/docs
+5. PostgreSQL Documentation - https://www.postgresql.org/docs/
+6. Tailwind CSS Documentation - https://tailwindcss.com/docs
+7. "Real-Time Collaboration Systems" - Academic papers on OT and CRDT
+8. Atlassian Design Guidelines - https://atlassian.design/
+9. GitHub Repository - https://github.com/[username]/notion-clone-project

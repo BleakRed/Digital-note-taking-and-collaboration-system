@@ -1,0 +1,177 @@
+@startuml
+
+' Simple ERD for Notion Clone - Tables and Relationships Only
+
+entity User {
+  * id : String <<PK>>
+  * email : String <<unique>>
+  username : String <<unique>>
+  --
+  ' Relations
+  ' owns > Workspace
+  ' member of > WorkspaceMember
+  ' creates > Page, File, Drawing
+  ' sends > ChatMessage
+  ' authors > KanbanCard
+  ' assigned to > KanbanCard
+}
+
+entity Workspace {
+  * id : String <<PK>>
+  * name : String
+  * ownerId : String <<FK>>
+  --
+  ' owns > User
+  ' has > WorkspaceMember
+  ' contains > Page, Folder, File
+  ' contains > Drawing, ChatRoom
+  ' has > KanbanBoard
+}
+
+entity WorkspaceMember {
+  * id : String <<PK>>
+  * workspaceId : String <<FK>>
+  * userId : String <<FK>>
+  * role : String
+  --
+  ' belongs to > Workspace
+  ' user > User
+}
+
+entity Page {
+  * id : String <<PK>>
+  * title : String
+  * workspaceId : String <<FK>>
+  * authorId : String <<FK>>
+  parentId : String <<FK>>
+  --
+  ' in > Workspace
+  ' author > User
+  ' parent > Page (self)
+  ' children > Page (self)
+}
+
+entity Folder {
+  * id : String <<PK>>
+  * name : String
+  * workspaceId : String <<FK>>
+  parentId : String <<FK>>
+  --
+  ' in > Workspace
+  ' parent > Folder (self)
+  ' children > Folder (self)
+  ' contains > File
+}
+
+entity File {
+  * id : String <<PK>>
+  * name : String
+  * url : String
+  * workspaceId : String <<FK>>
+  * uploaderId : String <<FK>>
+  folderId : String <<FK>>
+  --
+  ' in > Workspace
+  ' uploader > User
+  ' in folder > Folder
+}
+
+entity Drawing {
+  * id : String <<PK>>
+  * title : String
+  * workspaceId : String <<FK>>
+  * authorId : String <<FK>>
+  --
+  ' in > Workspace
+  ' author > User
+}
+
+entity ChatRoom {
+  * id : String <<PK>>
+  * name : String
+  * workspaceId : String <<FK>>
+  --
+  ' in > Workspace
+  ' has > ChatMessage
+}
+
+entity ChatMessage {
+  * id : String <<PK>>
+  * content : String
+  * chatRoomId : String <<FK>>
+  * authorId : String <<FK>>
+  --
+  ' in > ChatRoom
+  ' author > User
+}
+
+entity KanbanBoard {
+  * id : String <<PK>>
+  * title : String
+  * workspaceId : String <<FK>>
+  --
+  ' in > Workspace
+  ' has > KanbanColumn
+}
+
+entity KanbanColumn {
+  * id : String <<PK>>
+  * title : String
+  * boardId : String <<FK>>
+  * color : String
+  --
+  ' in > KanbanBoard
+  ' has > KanbanCard
+}
+
+entity KanbanCard {
+  * id : String <<PK>>
+  * content : String
+  * columnId : String <<FK>>
+  * authorId : String <<FK>>
+  --
+  ' in > KanbanColumn
+  ' author > User
+  ' assignees > User (many-to-many)
+}
+
+' ===== RELATIONSHIPS (Crow's Foot Notation) =====
+
+' User owns Workspaces
+User ||--o{ Workspace : "owns"
+
+' User is member of Workspaces
+User ||--o{ WorkspaceMember : "member"
+Workspace ||--o{ WorkspaceMember : "has members"
+
+' Workspace contains entities
+Workspace ||--o{ Page : "has"
+Workspace ||--o{ Folder : "has"
+Workspace ||--o{ File : "has"
+Workspace ||--o{ Drawing : "has"
+Workspace ||--o{ ChatRoom : "has"
+Workspace ||--o{ KanbanBoard : "has"
+
+' Page relationships
+User ||--o{ Page : "author"
+Page ||--o{ Page : "parent/children"
+
+' Folder relationships
+User ||--o{ Folder : "author?"
+Folder ||--o{ Folder : "parent/children"
+Folder ||--o{ File : "contains"
+
+' File relationships
+User ||--o{ File : "uploader"
+
+' Chat relationships
+User ||--o{ ChatMessage : "author"
+ChatRoom ||--o{ ChatMessage : "has"
+
+' Kanban relationships
+KanbanBoard ||--o{ KanbanColumn : "has"
+KanbanColumn ||--o{ KanbanCard : "has"
+User ||--o{ KanbanCard : "author"
+User }o--o{ KanbanCard : "assignees"
+
+@enduml

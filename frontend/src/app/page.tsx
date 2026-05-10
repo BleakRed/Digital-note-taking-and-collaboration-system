@@ -10,7 +10,8 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [isForgot, setIsForgot] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -60,7 +61,7 @@ export default function LandingPage() {
 
       const endpoint = isRegister ? '/auth/register' : '/auth/login';
       const payload = isRegister
-        ? { email, password, confirmPassword, username }
+        ? { email, password, confirmPassword, firstName, lastName }
         : { email, password };
 
       const { data } = await api.post(endpoint, payload);
@@ -162,17 +163,32 @@ export default function LandingPage() {
             ) : (
               <>
                 {isRegister && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1 ml-1 tracking-wider">Username</label>
-                    <input
-                      type="text"
-                      className="w-full p-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-black dark:text-white outline-none focus:border-blue-500 transition-all"
-                      placeholder="johndoe"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-400 mb-1 ml-1 tracking-wider">First Name</label>
+                        <input
+                          type="text"
+                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-black dark:text-white outline-none focus:border-blue-500 transition-all"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-400 mb-1 ml-1 tracking-wider">Last Name</label>
+                        <input
+                          type="text"
+                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-black dark:text-white outline-none focus:border-blue-500 transition-all"
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1 ml-1 tracking-wider">Email</label>

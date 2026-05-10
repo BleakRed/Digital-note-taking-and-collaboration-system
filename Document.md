@@ -154,9 +154,17 @@ class File {
 class Drawing {
   +id: UUID
   +title: String
-  +data: Text (JSON)
+  +data: String (JSON)
   +workspaceId: UUID
   +authorId: UUID
+}
+
+class Report {
+  +id: UUID
+  +title: String
+  +description: String
+  +status: String
+  +reporterId: UUID
 }
 
 class ChatRoom {
@@ -210,6 +218,7 @@ Page "1" -- "0..*" Page : nested (children)
 KanbanBoard "1" -- "0..*" KanbanColumn : contains
 KanbanColumn "1" -- "0..*" KanbanCard : contains
 KanbanCard "0..*" -- "0..*" User : assigned to (CardAssignees)
+User "1" -- "0..*" Report : files
 @enduml
 ```
 
@@ -905,3 +914,16 @@ nwdiag {
 
 ### 🛠 Туршилтын дүгнэлт
 Системийн гол хэсгүүд болох **Бодит цагийн синхрончлол** болон **Автомат цэвэрлэгээ** нь төлөвлөсөн логикийн дагуу ажиллаж байна. Ялангуяа 50MB-ын хязгаарлалт нь өндөр нягтралтай зургийн датаг алдаагүй дамжуулж байгаа нь баримтжуулалтаар нотлогдлоо.
+
+## 📂 Database Table Documentation
+Detailed database table definitions for all 13 Prisma models are available in separate files (generated on 2026-05-03):
+
+1. **Bilingual Version** (English + Mongolian translations)  
+   Path: `backend/DATABASE_TABLES.md`  
+   - 13 tables with English field details + 5-column Mongolian subsections (`Баганын нэр | ӨС нэр | Түлхүүр | Төрөл | Тайлбар`)
+
+2. **Full Mongolian Version**  
+   Path: `backend/DATABASE_TABLES_MN.md`  
+   - All 13 tables fully in Mongolian with 5-column structured tables.
+
+These documents include all fields, relations, foreign keys, and translations matching the Prisma schema (`prisma/schema.prisma`).

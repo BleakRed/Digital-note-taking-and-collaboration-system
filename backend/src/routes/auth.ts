@@ -12,7 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, confirmPassword, name, username } = req.body;
+    const { email, password, confirmPassword, firstName, lastName } = req.body;
     
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     if (password !== confirmPassword) return res.status(400).json({ error: 'Passwords do not match' });
@@ -20,19 +20,13 @@ router.post('/register', async (req: Request, res: Response) => {
     const existingEmail = await prisma.user.findUnique({ where: { email } });
     if (existingEmail) return res.status(400).json({ error: 'Email already exists' });
 
-    if (username) {
-        const existingUser = await prisma.user.findUnique({ where: { username } });
-        if (existingUser) return res.status(400).json({ error: 'Username already exists' });
-    }
-
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { 
         email, 
         password: hashedPassword, 
-        name, 
-        username,
+        name: `${firstName || ''} ${lastName || ''}`.trim(),
         verificationToken
       }
     });
