@@ -317,7 +317,7 @@ export default function FileExplorer({
                 {/* Files */}
                 {currentFiles.map(file => (
                     <div key={file.id} className="group bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-3xl overflow-hidden hover:border-blue-500/50 hover:shadow-xl transition-all flex flex-col">
-                        <div className="aspect-[4/3] bg-slate-50 dark:bg-slate-950 flex items-center justify-center relative group/preview">
+                        <div className="aspect-square bg-slate-50 dark:bg-slate-950 flex items-center justify-center relative group/preview overflow-hidden" style={{ maxHeight: '120px' }}>
                             {file.type.startsWith('image/') ? (
                                 <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
                             ) : (

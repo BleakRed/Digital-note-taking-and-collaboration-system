@@ -1399,8 +1399,8 @@ video {
 .hidden {
   display: none;
 }
-.aspect-\[4\/3\] {
-  aspect-ratio: 4/3;
+.aspect-square {
+  aspect-ratio: 1 / 1;
 }
 .aspect-video {
   aspect-ratio: 16 / 9;
@@ -1496,9 +1496,6 @@ video {
 .w-4 {
   width: 1rem;
 }
-.w-40 {
-  width: 10rem;
-}
 .w-48 {
   width: 12rem;
 }
@@ -1529,6 +1526,9 @@ video {
 }
 .min-w-0 {
   min-width: 0px;
+}
+.min-w-40 {
+  min-width: 10rem;
 }
 .min-w-\[200px\] {
   min-width: 200px;
@@ -1643,6 +1643,9 @@ video {
 }
 .cursor-crosshair {
   cursor: crosshair;
+}
+.cursor-default {
+  cursor: default;
 }
 .cursor-grab {
   cursor: grab;
@@ -2190,6 +2193,9 @@ video {
 }
 .pr-4 {
   padding-right: 1rem;
+}
+.pt-2 {
+  padding-top: 0.5rem;
 }
 .pt-3 {
   padding-top: 0.75rem;

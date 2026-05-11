@@ -16,14 +16,14 @@ router.post('/workspace/:workspaceId', authenticateToken, async (req: AuthReques
     const drawing = await prisma.drawing.create({
       data: {
         title: title || 'Untitled Drawing',
-        data,
+        data: data ?? '',
         workspaceId,
         authorId: userId
       }
     });
     res.json(drawing);
-  /* c8 ignore next 2 */
-} catch (err) {
+  } catch (err) {
+    console.error('[Drawing] create error:', err);
     res.status(500).json({ error: 'Failed to create drawing' });
   }
 });

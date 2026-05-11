@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { 
-    Plus, Trash2, Layout, User as UserIcon,
-    Settings, X, Check, Info, Palette
+    Plus, Layout, User as UserIcon,
+    Settings, X, Check, Info, Palette, Trash2 as TrashIcon, GripVertical
 } from 'lucide-react';
 import api from '../lib/api';
 import { socket } from '../lib/socket';
@@ -50,6 +50,9 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
     const [editingCard, setEditingCard] = useState<Card | null>(null);
     const [cardEditData, setCardEditData] = useState({ content: '', description: '' });
     const [editingColumn, setEditingColumn] = useState<Column | null>(null);
+    const [editingBoard, setEditingBoard] = useState(false);
+    const [boardTitle, setBoardTitle] = useState('');
+    const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
 
     const colors = [
         '#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#64748b'
@@ -162,6 +165,25 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
         } catch (err) {}
     };
 
+    const renameBoard = async () => {
+        if (!boardTitle.trim() || !selectedBoard) return;
+        try {
+            await api.put(`/kanban/board/${boardId}`, { title: boardTitle.trim() });
+            socket.emit('update-kanban', boardId);
+            setSelectedBoard((prev: any) => ({ ...prev, title: boardTitle.trim() }));
+            setEditingBoard(false);
+        } catch (err) {}
+    };
+
+    const deleteColumn = async (columnId: string) => {
+        if (!confirm('Delete this column and all its cards?')) return;
+        try {
+            await api.delete(`/kanban/columns/${columnId}`);
+            socket.emit('update-kanban', boardId);
+            fetchBoardDetails(boardId, true);
+        } catch (err) {}
+    };
+
     const updateColumn = async (columnId: string, data: { title?: string, color?: string }) => {
         try {
             await api.put(`/kanban/columns/${columnId}`, data);
@@ -184,6 +206,34 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
         moveCard(cardId, targetColumnId);
     };
 
+    const onColumnDragStart = (e: React.DragEvent, columnId: string) => {
+        if (!isOwner) return;
+        e.dataTransfer.setData('columnId', columnId);
+        setDraggingColumnId(columnId);
+    };
+
+    const onColumnDrop = async (e: React.DragEvent, targetColumnId: string) => {
+        e.preventDefault();
+        const sourceColumnId = e.dataTransfer.getData('columnId');
+        if (!sourceColumnId || sourceColumnId === targetColumnId) { setDraggingColumnId(null); return; }
+
+        const cols = [...selectedBoard!.columns];
+        const srcIdx = cols.findIndex(c => c.id === sourceColumnId);
+        const tgtIdx = cols.findIndex(c => c.id === targetColumnId);
+        if (srcIdx < 0 || tgtIdx < 0) { setDraggingColumnId(null); return; }
+
+        const [moved] = cols.splice(srcIdx, 1);
+        cols.splice(tgtIdx, 0, moved);
+        const updated = cols.map((c, i) => ({ ...c, order: i }));
+        setSelectedBoard(prev => prev ? { ...prev, columns: updated } : prev);
+        setDraggingColumnId(null);
+
+        try {
+            await api.put(`/kanban/columns/${sourceColumnId}/reorder`, { targetColumnId });
+            socket.emit('update-kanban', boardId);
+        } catch { fetchBoardDetails(boardId, true); }
+    };
+
     if (loading && !selectedBoard) return <div className="flex-1 flex items-center justify-center font-bold uppercase tracking-widest text-slate-400">Loading Board...</div>;
 
     if (!selectedBoard) return <div className="flex-1 flex items-center justify-center">Board not found</div>;
@@ -193,9 +243,33 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
             {/* Kanban Header */}
             <div className="p-4 md:p-8 bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm z-10">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h2 className="text-2xl font-black">{selectedBoard.title}</h2>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Task management board.</p>
+                    <div className="flex items-center gap-3">
+                        {editingBoard ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    autoFocus
+                                    value={boardTitle}
+                                    onChange={(e) => setBoardTitle(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && renameBoard()}
+                                    className="text-2xl font-black bg-transparent border-b-2 border-blue-500 outline-none px-1 text-slate-900 dark:text-slate-100"
+                                />
+                                <button onClick={renameBoard} className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"><Check size={18} /></button>
+                                <button onClick={() => setEditingBoard(false)} className="p-2 bg-slate-200 dark:bg-slate-700 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600"><X size={18} /></button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">{selectedBoard.title}</h2>
+                                {isOwner && (
+                                    <button
+                                        onClick={() => { setBoardTitle(selectedBoard.title); setEditingBoard(true); }}
+                                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-blue-600 transition-all"
+                                        title="Rename board"
+                                    >
+                                        <Settings size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <button 
@@ -213,16 +287,49 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
                     {selectedBoard.columns.map((column) => (
                         <div 
                             key={column.id} 
-                            className="w-80 flex flex-col h-fit max-h-full bg-slate-100/50 dark:bg-slate-900/30 rounded-[32px] border dark:border-slate-800/50 shadow-sm transition-all duration-300"
+                            className={`w-80 flex flex-col h-fit max-h-full bg-slate-100/50 dark:bg-slate-900/30 rounded-[32px] border dark:border-slate-800/50 shadow-sm transition-all duration-300 ${draggingColumnId === column.id ? 'opacity-50' : ''} ${isOwner ? 'cursor-default' : ''}`}
                             onDragOver={onDragOver}
-                            onDrop={(e) => onDrop(e, column.id)}
+                            onDrop={(e) => {
+                                if (e.dataTransfer.types.includes('columnId')) onColumnDrop(e, column.id);
+                                else onDrop(e, column.id);
+                            }}
                         >
                             {/* Column Header */}
                             <div className="p-6 flex justify-between items-center relative">
                                 <div className="flex items-center gap-3">
+                                    {isOwner && (
+                                        <div
+                                            draggable
+                                            onDragStart={(e) => onColumnDragStart(e, column.id)}
+                                            className="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500"
+                                            title="Drag to reorder"
+                                        >
+                                            <GripVertical size={14} />
+                                        </div>
+                                    )}
                                     <div className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)]" style={{ backgroundColor: column.color || '#3b82f6' }} />
                                     <h3 className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest text-xs">
-                                        {column.title} <span className="ml-2 text-slate-400">{column.cards.length}</span>
+                                        {editingColumn?.id === column.id ? (
+                                            <input
+                                                autoFocus
+                                                defaultValue={column.title}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') updateColumn(column.id, { title: (e.target as HTMLInputElement).value });
+                                                    if (e.key === 'Escape') setEditingColumn(null);
+                                                }}
+                                                onBlur={(e) => updateColumn(column.id, { title: (e.target as HTMLInputElement).value })}
+                                                className="bg-transparent border-b border-blue-500 outline-none w-32 px-1 font-black text-slate-900 dark:text-slate-100 uppercase text-xs"
+                                            />
+                                        ) : (
+                                            <span
+                                                onDoubleClick={() => isOwner && setEditingColumn(column)}
+                                                title={isOwner ? 'Double-click to rename' : column.title}
+                                                className={isOwner ? 'cursor-pointer hover:text-blue-600' : ''}
+                                            >
+                                                {column.title}
+                                            </span>
+                                        )}
+                                        <span className="ml-2 text-slate-400">{column.cards.length}</span>
                                     </h3>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -240,15 +347,26 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
                                 </div>
 
                                 {editingColumn?.id === column.id && (
-                                    <div className="absolute top-full right-6 z-50 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-2xl border dark:border-slate-800 flex flex-wrap gap-2 w-40">
-                                        {colors.map(c => (
-                                            <button 
-                                                key={c}
-                                                onClick={() => updateColumn(column.id, { color: c })}
-                                                className={`w-6 h-6 rounded-full border-2 ${column.color === c ? 'border-slate-900 dark:border-white' : 'border-transparent'}`}
-                                                style={{ backgroundColor: c }}
-                                            />
-                                        ))}
+                                    <div className="absolute top-full right-6 z-50 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-2xl border dark:border-slate-800 flex flex-col gap-3 min-w-40">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Color</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {colors.map(c => (
+                                                <button 
+                                                    key={c}
+                                                    onClick={() => updateColumn(column.id, { color: c })}
+                                                    className={`w-6 h-6 rounded-full border-2 ${column.color === c ? 'border-slate-900 dark:border-white' : 'border-transparent'}`}
+                                                    style={{ backgroundColor: c }}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="border-t dark:border-slate-800 pt-2">
+                                            <button
+                                                onClick={() => deleteColumn(column.id)}
+                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-black uppercase tracking-widest transition-all"
+                                            >
+                                                <TrashIcon size={14} /> Delete Column
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -303,7 +421,7 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
 
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={() => deleteCard(card.id)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-slate-300 hover:text-red-400">
-                                                    <Trash2 size={14} />
+                                                    <TrashIcon size={14} />
                                                 </button>
                                             </div>
                                         </div>

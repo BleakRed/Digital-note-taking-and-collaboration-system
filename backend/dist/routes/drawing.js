@@ -28,7 +28,7 @@ router.post('/workspace/:workspaceId', auth_1.authenticateToken, (req, res) => _
         const drawing = yield prisma_1.default.drawing.create({
             data: {
                 title: title || 'Untitled Drawing',
-                data,
+                data: data !== null && data !== void 0 ? data : '',
                 workspaceId,
                 authorId: userId
             }
@@ -36,6 +36,7 @@ router.post('/workspace/:workspaceId', auth_1.authenticateToken, (req, res) => _
         res.json(drawing);
     }
     catch (err) {
+        console.error('[Drawing] create error:', err);
         res.status(500).json({ error: 'Failed to create drawing' });
     }
 }));
@@ -53,6 +54,7 @@ router.put('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, voi
             }
         });
         res.json(drawing);
+        /* c8 ignore next 2 */
     }
     catch (err) {
         res.status(500).json({ error: 'Failed to update drawing' });
@@ -68,8 +70,10 @@ router.get('/workspace/:workspaceId', auth_1.authenticateToken, (req, res) => __
             orderBy: { updatedAt: 'desc' }
         });
         res.json(drawings);
+        /* c8 ignore next 2 */
     }
     catch (err) {
+        /* c8 ignore next 2 */
         res.status(500).json({ error: 'Failed to fetch drawings' });
     }
 }));
@@ -84,8 +88,10 @@ router.get('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, voi
         if (!drawing)
             return res.status(404).json({ error: 'Drawing not found' });
         res.json(drawing);
+        /* c8 ignore next 2 */
     }
     catch (err) {
+        /* c8 ignore next 2 */
         res.status(500).json({ error: 'Failed to fetch drawing' });
     }
 }));
@@ -95,8 +101,10 @@ router.delete('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, 
     try {
         yield prisma_1.default.drawing.delete({ where: { id } });
         res.json({ message: 'Drawing deleted' });
+        /* c8 ignore next 2 */
     }
     catch (err) {
+        /* c8 ignore next 2 */
         res.status(500).json({ error: 'Failed to delete drawing' });
     }
 }));

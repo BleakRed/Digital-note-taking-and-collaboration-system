@@ -22,15 +22,16 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const lastPos = useRef({ x: 0, y: 0 });
+  const initialLoadDone = useRef(false);
 
-  // Auto-load first drawing once drawings are fetched
   useEffect(() => {
     if (drawings.length === 0) return;
-    if (selectedDrawingId !== null) return;
+    if (initialLoadDone.current) return;
     const canvas = canvasRef.current;
     if (!canvas || canvas.width === 0 || canvas.height === 0) return;
+    initialLoadDone.current = true;
     loadDrawing(drawings[0]);
-  }, [drawings, selectedDrawingId]);
+  }, [drawings]);
 
   useEffect(() => {
     // Join the drawing room
@@ -200,8 +201,8 @@ export default function DrawingCanvas({ workspaceId }: { workspaceId: string }) 
     }
     
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * (rect.width ? canvas.width / rect.width : 1),
+      y: (clientY - rect.top) * (rect.height ? canvas.height / rect.height : 1)
     };
   };
 

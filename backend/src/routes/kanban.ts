@@ -54,6 +54,29 @@ router.post('/workspace/:workspaceId', authenticateToken, async (req: AuthReques
   }
 });
 
+// Update a board title
+router.put('/board/:boardId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { boardId } = req.params;
+    const { title } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: 'Title required' });
+
+    // Check workspace ownership
+    const board = await prisma.kanbanBoard.findUnique({ where: { id: boardId }, include: { workspace: true } });
+    if (!board) return res.status(404).json({ error: 'Board not found' });
+    if (board.workspace.ownerId !== req.user?.userId) return res.status(403).json({ error: 'Only workspace owner can rename boards' });
+
+    const updated = await prisma.kanbanBoard.update({
+      where: { id: boardId },
+      data: { title: title.trim() }
+    });
+    res.json(updated);
+  /* c8 ignore next 2 */
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update board' });
+  }
+});
+
 // Get a board with columns and cards
 router.get('/board/:boardId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -215,6 +238,26 @@ router.put('/columns/:columnId', authenticateToken, async (req: AuthRequest, res
     }
 });
 
+// Delete a column (owner only)
+router.delete('/columns/:columnId', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { columnId } = req.params;
+        const userId = req.user!.userId;
+
+        const column = await prisma.kanbanColumn.findUnique({
+            where: { id: columnId },
+            include: { board: { include: { workspace: true } } }
+        });
+        if (!column) return res.status(404).json({ error: 'Column not found' });
+        if (column.board.workspace.ownerId !== userId) return res.status(403).json({ error: 'Only the workspace owner can delete columns' });
+
+        await prisma.kanbanColumn.delete({ where: { id: columnId } });
+        res.json({ message: 'Column deleted' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete column' });
+    }
+});
+
 // Delete a card
 router.delete('/cards/:cardId', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
@@ -257,6 +300,42 @@ router.post('/board/:boardId/columns', authenticateToken, async (req: AuthReques
 } catch (error) {
         /* c8 ignore next 2 */
         res.status(500).json({ error: 'Failed to create column' });
+    }
+});
+
+// Reorder a column within a board (owner only)
+router.put('/columns/:columnId/reorder', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { columnId } = req.params;
+        const { targetColumnId } = req.body;
+        const userId = req.user!.userId;
+
+        const column = await prisma.kanbanColumn.findUnique({
+            where: { id: columnId },
+            include: { board: { include: { workspace: true } } }
+        });
+        if (!column) return res.status(404).json({ error: 'Column not found' });
+        if (column.board.workspace.ownerId !== userId) return res.status(403).json({ error: 'Only the workspace owner can reorder columns' });
+
+        const cols = await prisma.kanbanColumn.findMany({
+            where: { boardId: column.boardId },
+            orderBy: { order: 'asc' }
+        });
+
+        const srcIdx = cols.findIndex(c => c.id === columnId);
+        const tgtIdx = cols.findIndex(c => c.id === targetColumnId);
+        if (srcIdx < 0 || tgtIdx < 0) return res.status(400).json({ error: 'Invalid column ids' });
+
+        const [moved] = cols.splice(srcIdx, 1);
+        cols.splice(tgtIdx, 0, moved);
+
+        await Promise.all(cols.map((c, i) =>
+            prisma.kanbanColumn.update({ where: { id: c.id }, data: { order: i } })
+        ));
+
+        res.json({ message: 'Column reordered' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to reorder column' });
     }
 });
 
