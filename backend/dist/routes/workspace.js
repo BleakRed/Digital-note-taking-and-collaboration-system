@@ -29,6 +29,15 @@ router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 
                 members: {
                     create: { userId, role: 'OWNER' }
                 }
+            },
+            include: {
+                members: {
+                    include: {
+                        user: {
+                            select: { id: true, email: true, name: true, username: true, avatarUrl: true }
+                        }
+                    }
+                }
             }
         });
         res.json(workspace);

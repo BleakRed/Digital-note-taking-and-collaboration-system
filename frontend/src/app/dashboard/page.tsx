@@ -237,7 +237,7 @@ export default function Dashboard() {
 
                     <div className="flex items-center justify-between pt-4 border-t dark:border-slate-800">
                       <div className="flex -space-x-2 items-center">
-                        {w.members?.slice(0, 3).map((m, i) => (
+                        {(w.members || []).slice(0, 3).map((m, i) => (
                           <div
                             key={m.userId}
                             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 overflow-hidden relative group/avatar"

@@ -22,6 +22,15 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         members: {
           create: { userId, role: 'OWNER' }
         }
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: { id: true, email: true, name: true, username: true, avatarUrl: true }
+            }
+          }
+        }
       }
     });
 
