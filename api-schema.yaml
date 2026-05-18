@@ -1,0 +1,1460 @@
+openapi: "3.0.3"
+info:
+  title: Notion Clone API
+  description: |
+    Collaborative workspace backend. All endpoints except auth require
+    `Authorization: Bearer <token>` header. Token obtained from /auth/login.
+  version: 1.0.0
+  contact:
+    email: shadowbleakred@gmail.com
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local development
+  - url: https://notion-clone-backend.onrender.com/api
+    description: Render deployment
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        username: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        firstName: { type: string, nullable: true }
+        lastName: { type: string, nullable: true }
+        avatarUrl: { type: string, format: uri, nullable: true }
+        isVerified: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Workspace:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        ownerId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/WorkspaceMember" }
+
+    WorkspaceMember:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        role: { type: string, enum: [OWNER, ADMIN, MEMBER] }
+        joinedAt: { type: string, format: date-time }
+        user:
+          $ref: "#/components/schemas/UserPreview"
+
+    UserPreview:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        username: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        avatarUrl: { type: string, format: uri, nullable: true }
+
+    Page:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        content: { type: string }
+        workspaceId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        parentId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ChatRoom:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        workspaceId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    ChatMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string, maxLength: 1000 }
+        chatRoomId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        author: { $ref: "#/components/schemas/UserPreview" }
+
+    KanbanBoard:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        workspaceId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        columns:
+          type: array
+          items: { $ref: "#/components/schemas/KanbanColumn" }
+
+    KanbanColumn:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        color: { type: string, default: "#3b82f6" }
+        boardId: { type: string, format: uuid }
+        order: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        cards:
+          type: array
+          items: { $ref: "#/components/schemas/KanbanCard" }
+
+    KanbanCard:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string }
+        description: { type: string, nullable: true }
+        columnId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        order: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        author: { $ref: "#/components/schemas/UserPreview" }
+        assignees:
+          type: array
+          items: { $ref: "#/components/schemas/UserPreview" }
+
+    Drawing:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, default: "Untitled Drawing" }
+        data: { type: string, description: "Base64 PNG or JSON stroke array" }
+        workspaceId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    FileEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        url: { type: string, format: uri }
+        size: { type: integer, description: "Bytes" }
+        type: { type: string, description: "MIME type" }
+        description: { type: string, nullable: true }
+        workspaceId: { type: string, format: uuid }
+        uploaderId: { type: string, format: uuid }
+        folderId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Folder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        workspaceId: { type: string, format: uuid }
+        parentId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        children: { type: array, items: { $ref: "#/components/schemas/Folder" } }
+        files: { type: array, items: { $ref: "#/components/schemas/FileEntry" } }
+
+    Report:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [OPEN, RESOLVED] }
+        reporterId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers: { type: integer }
+        totalWorkspaces: { type: integer }
+        totalFiles: { type: integer }
+        totalReports: { type: integer }
+        usersLast30Days: { type: integer }
+        workspacesLast30Days: { type: integer }
+        filesLast30Days: { type: integer }
+        reportsLast30Days: { type: integer }
+
+paths:
+  # ─── AUTH ──────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, confirmPassword]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 6 }
+                confirmPassword: { type: string }
+                firstName: { type: string }
+                lastName: { type: string }
+      responses:
+        "201":
+          description: Registration successful. Verification email sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  userId: { type: string, format: uuid }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: "#/components/schemas/User" }
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Send password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Reset email sent (if account exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 6 }
+      responses:
+        "200":
+          description: Password reset successful
+        "400":
+          description: Invalid or expired token
+
+  /auth/verify-email:
+    get:
+      tags: [Auth]
+      summary: Verify email with token
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Email verified
+        "400":
+          description: Invalid or expired token
+
+  /auth/profile:
+    put:
+      tags: [Auth]
+      summary: Update profile
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                avatarUrl: { type: string, format: uri, nullable: true }
+                removeAvatar: { type: boolean }
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+
+  # ─── WORKSPACES ────────────────────────────────────
+  /workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List user's workspaces
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Workspace list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Workspace" }
+
+    post:
+      tags: [Workspaces]
+      summary: Create workspace
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Workspace created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+
+  /workspaces/{id}:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace details
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Workspace details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+
+    put:
+      tags: [Workspaces]
+      summary: Rename workspace (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "200":
+          description: Workspace renamed
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Workspace deleted
+
+  /workspaces/{id}/members:
+    get:
+      tags: [Workspaces]
+      summary: List workspace members
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkspaceMember" }
+
+  /workspaces/{id}/invite:
+    post:
+      tags: [Workspaces]
+      summary: Invite member by email (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Member invited
+
+  /workspaces/{id}/members/{memberId}:
+    delete:
+      tags: [Workspaces]
+      summary: Remove member (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: memberId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Member removed
+
+  # ─── PAGES ─────────────────────────────────────────
+  /pages:
+    post:
+      tags: [Pages]
+      summary: Create page
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, workspaceId]
+              properties:
+                title: { type: string }
+                workspaceId: { type: string, format: uuid }
+                parentId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Page created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Page" }
+
+  /pages/workspace/{workspaceId}:
+    get:
+      tags: [Pages]
+      summary: List pages in workspace
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Page list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Page" }
+
+  /pages/{id}:
+    get:
+      tags: [Pages]
+      summary: Get page with content
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Page content
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Page" }
+
+    put:
+      tags: [Pages]
+      summary: Update page title/content
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+      responses:
+        "200":
+          description: Page updated
+
+  # ─── CHAT ──────────────────────────────────────────
+  /chat/workspace/{workspaceId}/rooms:
+    get:
+      tags: [Chat]
+      summary: List chat rooms (creates default "General" if empty)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Chat room list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatRoom" }
+
+    post:
+      tags: [Chat]
+      summary: Create chat room
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "200":
+          description: Room created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatRoom" }
+
+  /chat/room/{roomId}/messages:
+    get:
+      tags: [Chat]
+      summary: Get chat messages
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: roomId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatMessage" }
+
+  /chat/room/{roomId}:
+    post:
+      tags: [Chat]
+      summary: Send message (emits socket event)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: roomId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Message sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
+
+  /chat/message/{messageId}:
+    put:
+      tags: [Chat]
+      summary: Edit message (author only, emits socket event)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Message updated
+
+    delete:
+      tags: [Chat]
+      summary: Delete message (author only, emits socket event)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Message deleted
+
+  # ─── KANBAN ────────────────────────────────────────
+  /kanban/workspace/{workspaceId}:
+    get:
+      tags: [Kanban]
+      summary: List boards
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Board list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/KanbanBoard" }
+
+    post:
+      tags: [Kanban]
+      summary: Create board with default columns (To Do / In Progress / Done)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+      responses:
+        "200":
+          description: Board created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KanbanBoard" }
+
+  /kanban/board/{boardId}:
+    get:
+      tags: [Kanban]
+      summary: Get board with columns and cards
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: boardId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Full board
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KanbanBoard" }
+
+    put:
+      tags: [Kanban]
+      summary: Rename board (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: boardId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+      responses:
+        "200":
+          description: Board renamed
+
+  /kanban/board/{boardId}/columns:
+    post:
+      tags: [Kanban]
+      summary: Add column to board
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: boardId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                color: { type: string }
+      responses:
+        "200":
+          description: Column added
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KanbanColumn" }
+
+  /kanban/columns/{columnId}:
+    put:
+      tags: [Kanban]
+      summary: Update column title/color (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: columnId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                color: { type: string }
+      responses:
+        "200":
+          description: Column updated
+
+    delete:
+      tags: [Kanban]
+      summary: Delete column and its cards (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: columnId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Column deleted
+
+  /kanban/columns/{columnId}/reorder:
+    put:
+      tags: [Kanban]
+      summary: Reorder column (owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: columnId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetColumnId]
+              properties:
+                targetColumnId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Columns reordered
+
+  /kanban/columns/{columnId}/cards:
+    post:
+      tags: [Kanban]
+      summary: Create card in column
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: columnId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+                description: { type: string }
+      responses:
+        "200":
+          description: Card created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KanbanCard" }
+
+  /kanban/cards/{cardId}:
+    put:
+      tags: [Kanban]
+      summary: Update card (content, description, column)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: cardId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                description: { type: string }
+                columnId: { type: string, format: uuid }
+                order: { type: integer }
+      responses:
+        "200":
+          description: Card updated
+
+    delete:
+      tags: [Kanban]
+      summary: Delete card
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: cardId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Card deleted
+
+  /kanban/cards/{cardId}/assign:
+    put:
+      tags: [Kanban]
+      summary: Toggle user assignment on card
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: cardId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Assignment toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignees:
+                    type: array
+                    items: { $ref: "#/components/schemas/UserPreview" }
+
+  # ─── DRAWINGS ──────────────────────────────────────
+  /drawings/workspace/{workspaceId}:
+    get:
+      tags: [Drawings]
+      summary: List drawings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Drawing list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Drawing" }
+
+    post:
+      tags: [Drawings]
+      summary: Save new drawing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, data]
+              properties:
+                title: { type: string }
+                data: { type: string }
+      responses:
+        "200":
+          description: Drawing saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Drawing" }
+
+  /drawings/{id}:
+    get:
+      tags: [Drawings]
+      summary: Get drawing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Drawing data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Drawing" }
+
+    put:
+      tags: [Drawings]
+      summary: Update drawing data
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data: { type: string }
+      responses:
+        "200":
+          description: Drawing updated
+
+    delete:
+      tags: [Drawings]
+      summary: Delete drawing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Drawing deleted
+
+  # ─── FILES ─────────────────────────────────────────
+  /files/workspace/{workspaceId}:
+    get:
+      tags: [Files]
+      summary: List files and folders (nested tree)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  folders:
+                    type: array
+                    items: { $ref: "#/components/schemas/Folder" }
+                  files:
+                    type: array
+                    items: { $ref: "#/components/schemas/FileEntry" }
+
+    post:
+      tags: [Files]
+      summary: Upload file (multipart)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                folderId: { type: string }
+                description: { type: string }
+      responses:
+        "200":
+          description: File uploaded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FileEntry" }
+
+  /files/folders/{workspaceId}:
+    post:
+      tags: [Files]
+      summary: Create folder
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                parentId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Folder created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Folder" }
+
+  /files/{id}:
+    put:
+      tags: [Files]
+      summary: Update file content (in-browser code editing)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+      responses:
+        "200":
+          description: File updated
+
+    delete:
+      tags: [Files]
+      summary: Delete file (also removes from Supabase Storage)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File deleted
+
+  /files/folders/{id}:
+    delete:
+      tags: [Files]
+      summary: Delete folder
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Folder deleted
+
+  # ─── UPLOAD ────────────────────────────────────────
+  /upload:
+    post:
+      tags: [Upload]
+      summary: Upload image (5MB limit, for editor & avatars)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: Image uploaded to Supabase
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }
+
+  # ─── ADMIN ─────────────────────────────────────────
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Dashboard statistics
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminStats" }
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (paginated)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [createdAt, email, username] }
+      responses:
+        "200":
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+                  total: { type: integer }
+                  page: { type: integer }
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get user details
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: User data
+
+    put:
+      tags: [Admin]
+      summary: Update user
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                isVerified: { type: boolean }
+      responses:
+        "200":
+          description: User updated
+
+  /admin/users/unverified:
+    delete:
+      tags: [Admin]
+      summary: Delete unverified users older than 30 days
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Cleanup completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  deletedCount: { type: integer }
+
+  /admin/workspaces:
+    get:
+      tags: [Admin]
+      summary: List all workspaces
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Workspace list
+
+  /admin/workspaces/orphan:
+    delete:
+      tags: [Admin]
+      summary: Delete orphan workspaces (no members, no owner)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Cleanup completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  deletedCount: { type: integer }
+
+  /admin/workspaces/{id}:
+    get:
+      tags: [Admin]
+      summary: Get workspace details
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Workspace data
+
+    put:
+      tags: [Admin]
+      summary: Update workspace
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        "200":
+          description: Workspace updated
+
+    delete:
+      tags: [Admin]
+      summary: Delete workspace
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Workspace deleted
+
+  /admin/files:
+    get:
+      tags: [Admin]
+      summary: List all files
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: File list
+
+  /admin/files/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete file
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File deleted
+
+  /admin/reports:
+    get:
+      tags: [Admin]
+      summary: List reports
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Report list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Report" }
+
+    post:
+      tags: [Admin]
+      summary: Create report
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description]
+              properties:
+                title: { type: string }
+                description: { type: string }
+      responses:
+        "200":
+          description: Report created
+
+  /admin/reports/{id}:
+    put:
+      tags: [Admin]
+      summary: Update report status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [OPEN, RESOLVED] }
+      responses:
+        "200":
+          description: Report updated

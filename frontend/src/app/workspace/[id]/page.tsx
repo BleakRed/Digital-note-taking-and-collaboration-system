@@ -92,6 +92,9 @@ export default function Workspace() {
   const [newAvatarUrl, setNewAvatarUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const updatePageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const contentRef = useRef('');
   const router = useRouter();
 
   useEffect(() => {
@@ -200,7 +203,23 @@ export default function Workspace() {
 
       socket.emit('join-page', selectedPage.id);
       socket.on('page-updated', (newContent: string) => {
+        contentRef.current = newContent;
         setContent(newContent);
+
+        const ta = textareaRef.current;
+        if (!ta || ta.value === newContent) return;
+
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const st = ta.scrollTop;
+
+        ta.value = newContent;
+
+        if (document.activeElement === ta) {
+          ta.selectionStart = Math.min(start, newContent.length);
+          ta.selectionEnd = Math.min(end, newContent.length);
+          if (st !== undefined) ta.scrollTop = st;
+        }
       });
       socket.on('cursor-updated', (data: { userId: string, userName: string, x: number, y: number }) => {
         setCursors(prev => ({
@@ -267,13 +286,18 @@ export default function Workspace() {
 
   const updateContent = (val: string) => {
     setContent(val);
+    contentRef.current = val;
     if (selectedPage) {
-      socket.emit('update-page', { pageId: selectedPage.id, content: val });
-      // Debounced auto-save
-      const timeout = setTimeout(() => {
-        api.put(`/pages/${selectedPage.id}`, { content: val });
+      if (updatePageTimeoutRef.current) {
+        clearTimeout(updatePageTimeoutRef.current);
+      }
+      updatePageTimeoutRef.current = setTimeout(() => {
+        socket.emit('update-page', { pageId: selectedPage.id, content: contentRef.current });
+      }, 100);
+
+      setTimeout(() => {
+        api.put(`/pages/${selectedPage.id}`, { content: contentRef.current });
       }, 1000);
-      return () => clearTimeout(timeout);
     }
   };
 
@@ -502,9 +526,11 @@ export default function Workspace() {
                         </div>
                       ))}
                       <textarea
+                        ref={textareaRef}
+                        key={selectedPage.id}
                         className="w-full h-[calc(100vh-280px)] outline-none resize-none text-base md:text-xl leading-relaxed bg-transparent text-slate-700 dark:text-slate-300 font-mono scrollbar-hide"
                         placeholder="Write something brilliant... (supports Markdown)"
-                        value={content}
+                        defaultValue={content}
                         onChange={(e) => updateContent(e.target.value)}
                         onKeyUp={handleCaretMove}
                         onSelect={handleCaretMove}
