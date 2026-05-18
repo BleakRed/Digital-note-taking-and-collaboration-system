@@ -1,4 +1,6 @@
-# Notion Clone Project - Documentation
+# Digital note-taking and collaboration system
+
+# Formerly known as Notion Clone Project - Documentation
 
 This project is a full-stack, real-time collaborative workspace application inspired by Notion. It allows teams to manage pages, share files, draw together, chat, and manage tasks with Kanban boards in a unified, mobile-responsive environment.
 
