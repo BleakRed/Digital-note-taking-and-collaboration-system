@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  outputFileTracingRoot: '/home/bleakred/Documents/github-stuff/projects/notion-clone-project/frontend',
-};
+const nextConfig = {};
 
 export default nextConfig;
