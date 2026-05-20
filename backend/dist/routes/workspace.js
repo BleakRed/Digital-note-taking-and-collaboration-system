@@ -8,11 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = __importDefault(require("../prisma"));
 const router = (0, express_1.Router)();
 // Create workspace
 router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -22,7 +24,7 @@ router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 
         if (!name || name.trim().length === 0) {
             return res.status(400).json({ error: 'Workspace name is required' });
         }
-        const workspace = yield prisma.workspace.create({
+        const workspace = yield prisma_1.default.workspace.create({
             data: {
                 name,
                 ownerId: userId,
@@ -53,7 +55,7 @@ router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 
 router.get('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user.userId;
-        const memberships = yield prisma.workspaceMember.findMany({
+        const memberships = yield prisma_1.default.workspaceMember.findMany({
             where: { userId },
             include: {
                 workspace: {
@@ -78,11 +80,42 @@ router.get('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0
         res.status(500).json({ error: 'Failed to fetch workspaces' });
     }
 }));
+// Get workspace by ID
+router.get('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const workspaceId = req.params.id;
+        const userId = req.user.userId;
+        const membership = yield prisma_1.default.workspaceMember.findUnique({
+            where: { workspaceId_userId: { workspaceId, userId } }
+        });
+        if (!membership)
+            return res.status(403).json({ error: 'Not a member of this workspace' });
+        const workspace = yield prisma_1.default.workspace.findUnique({
+            where: { id: workspaceId },
+            include: {
+                members: {
+                    include: {
+                        user: {
+                            select: { id: true, email: true, name: true, username: true, avatarUrl: true }
+                        }
+                    }
+                }
+            }
+        });
+        if (!workspace)
+            return res.status(404).json({ error: 'Workspace not found' });
+        res.json(workspace);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch workspace' });
+    }
+}));
 // Get workspace members
 router.get('/:id/members', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const workspaceId = req.params.id;
-        const members = yield prisma.workspaceMember.findMany({
+        const members = yield prisma_1.default.workspaceMember.findMany({
             where: { workspaceId },
             include: {
                 user: {
@@ -106,7 +139,7 @@ router.post('/:id/invite', auth_1.authenticateToken, (req, res) => __awaiter(voi
         const { email } = req.body;
         const ownerId = req.user.userId;
         // Check ownership
-        const workspace = yield prisma.workspace.findUnique({
+        const workspace = yield prisma_1.default.workspace.findUnique({
             where: { id: workspaceId }
         });
         if (!workspace)
@@ -114,16 +147,16 @@ router.post('/:id/invite', auth_1.authenticateToken, (req, res) => __awaiter(voi
         if (workspace.ownerId !== ownerId) {
             return res.status(403).json({ error: 'Only owner can invite' });
         }
-        const userToInvite = yield prisma.user.findUnique({ where: { email } });
+        const userToInvite = yield prisma_1.default.user.findUnique({ where: { email } });
         if (!userToInvite)
             return res.status(404).json({ error: 'User not found' });
         // Check if already member
-        const existing = yield prisma.workspaceMember.findFirst({
+        const existing = yield prisma_1.default.workspaceMember.findFirst({
             where: { workspaceId, userId: userToInvite.id }
         });
         if (existing)
             return res.status(400).json({ error: 'User already a member' });
-        yield prisma.workspaceMember.create({
+        yield prisma_1.default.workspaceMember.create({
             data: {
                 workspaceId,
                 userId: userToInvite.id,
@@ -147,7 +180,7 @@ router.delete('/:id/members/:memberId', auth_1.authenticateToken, (req, res) => 
         const memberId = req.params.memberId;
         const ownerId = req.user.userId;
         // Check ownership
-        const workspace = yield prisma.workspace.findUnique({
+        const workspace = yield prisma_1.default.workspace.findUnique({
             where: { id: workspaceId }
         });
         if (!workspace)
@@ -158,7 +191,7 @@ router.delete('/:id/members/:memberId', auth_1.authenticateToken, (req, res) => 
         if (memberId === ownerId) {
             return res.status(400).json({ error: 'Cannot remove owner' });
         }
-        yield prisma.workspaceMember.deleteMany({
+        yield prisma_1.default.workspaceMember.deleteMany({
             where: {
                 workspaceId,
                 userId: memberId

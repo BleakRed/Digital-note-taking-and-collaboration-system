@@ -28,8 +28,14 @@ export default function LandingPage() {
       document.documentElement.classList.add('dark');
     }
 
-    if (Cookies.get('token')) {
-      router.push('/dashboard');
+    const token = Cookies.get('token');
+    if (token) {
+      api.get('/workspaces').then(() => {
+        router.push('/dashboard');
+      }).catch(() => {
+        Cookies.remove('token');
+        Cookies.remove('user');
+      });
     }
   }, [router]);
 

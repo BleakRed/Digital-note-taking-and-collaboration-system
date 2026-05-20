@@ -3,11 +3,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { supabase, supabaseBucket } from '../supabase';
+import { supabase, supabaseBucket, USE_SUPABASE } from '../supabase';
 
 const router = Router();
-
-const USE_SUPABASE = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Use memory storage for Multer to avoid ephemeral disk issues
 const storage = multer.memoryStorage();
@@ -28,6 +26,10 @@ const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
 if (!USE_SUPABASE && !fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
+
+const getBaseUrl = (req: AuthRequest) => {
+  return process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+};
 
 router.post('/', authenticateToken, upload.single('image'), async (req: AuthRequest, res: Response) => {
   if (!req.file) {
@@ -64,8 +66,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req: AuthRequ
       const localPath = path.join(UPLOADS_DIR, relativePath);
       fs.writeFileSync(localPath, file.buffer);
 
-      // Return a URL that can be served by the Express static handler
-      const baseUrl = process.env.FRONTEND_URL?.replace(/\/api.*/, '') || 'http://localhost:8000';
+      const baseUrl = getBaseUrl(req);
       const publicUrl = `${baseUrl}/uploads/${relativePath}`;
       res.json({ url: publicUrl });
     }

@@ -15,21 +15,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const auth_1 = require("../middleware/auth");
 const prisma_1 = __importDefault(require("../prisma"));
 const supabase_1 = require("../supabase");
 const router = (0, express_1.Router)();
-// Use memory storage for Multer to avoid ephemeral disk issues
+// Use memory storage for Multer
 const storage = multer_1.default.memoryStorage();
 const upload = (0, multer_1.default)({
-    storage: storage,
+    storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
+// Ensure uploads directory exists for local storage
+const UPLOADS_DIR = path_1.default.join(process.cwd(), 'uploads');
+if (!supabase_1.USE_SUPABASE && !fs_1.default.existsSync(UPLOADS_DIR)) {
+    fs_1.default.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 // Helper to extract path from Supabase URL
 const getFilePathFromUrl = (url) => {
-    // Public URL format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
     const parts = url.split(`/storage/v1/object/public/${supabase_1.supabaseBucket}/`);
     return parts.length > 1 ? parts[1] : null;
+};
+const getBaseUrl = (req) => {
+    return process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 };
 // Upload a file to a workspace
 router.post('/workspace/:workspaceId', auth_1.authenticateToken, upload.single('file'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -43,22 +51,35 @@ router.post('/workspace/:workspaceId', auth_1.authenticateToken, upload.single('
     try {
         const file = req.file;
         const fileExt = path_1.default.extname(file.originalname);
-        const fileName = `files/${workspaceId}/${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExt}`;
-        // Upload to Supabase
-        const { data, error } = yield supabase_1.supabase.storage
-            .from(supabase_1.supabaseBucket)
-            .upload(fileName, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true
-        });
-        if (error) {
-            console.error('Supabase upload error:', error);
-            return res.status(500).json({ error: 'Failed to upload file to storage' });
+        const relativePath = `files/${workspaceId}/${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExt}`;
+        const fileName = relativePath;
+        let publicUrl;
+        if (supabase_1.USE_SUPABASE) {
+            const { data, error } = yield supabase_1.supabase.storage
+                .from(supabase_1.supabaseBucket)
+                .upload(fileName, file.buffer, {
+                contentType: file.mimetype,
+                upsert: true
+            });
+            if (error) {
+                console.error('Supabase upload error:', error);
+                return res.status(500).json({ error: 'Failed to upload file to storage' });
+            }
+            const { data: { publicUrl: url } } = supabase_1.supabase.storage
+                .from(supabase_1.supabaseBucket)
+                .getPublicUrl(fileName);
+            publicUrl = url;
         }
-        // Get public URL
-        const { data: { publicUrl } } = supabase_1.supabase.storage
-            .from(supabase_1.supabaseBucket)
-            .getPublicUrl(fileName);
+        else {
+            const localDir = path_1.default.join(UPLOADS_DIR, `files/${workspaceId}`);
+            if (!fs_1.default.existsSync(localDir))
+                fs_1.default.mkdirSync(localDir, { recursive: true });
+            const localFilename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExt}`;
+            const localPath = path_1.default.join(localDir, localFilename);
+            fs_1.default.writeFileSync(localPath, file.buffer);
+            const baseUrl = getBaseUrl(req);
+            publicUrl = `${baseUrl}/uploads/files/${workspaceId}/${localFilename}`;
+        }
         const fileRecord = yield prisma_1.default.file.create({
             data: {
                 name: req.file.originalname,
@@ -85,11 +106,7 @@ router.post('/folders/:workspaceId', auth_1.authenticateToken, (req, res) => __a
     const { name, parentId } = req.body;
     try {
         const folder = yield prisma_1.default.folder.create({
-            data: {
-                name,
-                workspaceId,
-                parentId: parentId || null,
-            }
+            data: { name, workspaceId, parentId: parentId || null }
         });
         res.json(folder);
     }
@@ -118,13 +135,8 @@ router.get('/workspace/:workspaceId', auth_1.authenticateToken, (req, res) => __
 }));
 // Delete a folder
 router.delete('/folders/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
     try {
-        // Note: This won't delete files in the folder unless we do it recursively or Cascade
-        // Prisma Cascade delete would be better, but we'll do it manually for simplicity if needed
-        // In schema we didn't add Cascade. 
-        // Let's just delete the folder for now.
-        yield prisma_1.default.folder.delete({ where: { id } });
+        yield prisma_1.default.folder.delete({ where: { id: req.params.id } });
         res.json({ message: 'Folder deleted' });
     }
     catch (err) {
@@ -134,28 +146,32 @@ router.delete('/folders/:id', auth_1.authenticateToken, (req, res) => __awaiter(
 // Delete a file
 router.delete('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const { id } = req.params;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
     try {
-        const file = yield prisma_1.default.file.findUnique({ where: { id } });
+        const file = yield prisma_1.default.file.findUnique({ where: { id: req.params.id } });
         if (!file)
             return res.status(404).json({ error: 'File not found' });
-        // Check if user is uploader or workspace owner (simplified: just uploader for now)
-        if (file.uploaderId !== userId) {
+        if (file.uploaderId !== userId)
             return res.status(403).json({ error: 'Unauthorized' });
-        }
-        // Delete from Supabase
-        const filePath = getFilePathFromUrl(file.url);
-        if (filePath) {
-            const { error } = yield supabase_1.supabase.storage
-                .from(supabase_1.supabaseBucket)
-                .remove([filePath]);
-            if (error) {
-                console.error('Supabase delete error:', error);
-                // We continue to delete from DB even if Supabase fails (maybe it was already gone)
+        if (supabase_1.USE_SUPABASE) {
+            const filePath = getFilePathFromUrl(file.url);
+            if (filePath) {
+                yield supabase_1.supabase.storage.from(supabase_1.supabaseBucket).remove([filePath]);
             }
         }
-        yield prisma_1.default.file.delete({ where: { id } });
+        else {
+            // Try to delete local file
+            const uploadsPath = path_1.default.join(UPLOADS_DIR, 'files');
+            const relative = file.url.split('/uploads/files/')[1];
+            if (relative) {
+                const localPath = path_1.default.join(uploadsPath, relative);
+                try {
+                    fs_1.default.unlinkSync(localPath);
+                }
+                catch ( /* ignore if not found */_b) { /* ignore if not found */ }
+            }
+        }
+        yield prisma_1.default.file.delete({ where: { id: req.params.id } });
         res.json({ message: 'File deleted' });
     }
     catch (err) {
@@ -163,40 +179,49 @@ router.delete('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, 
         res.status(500).json({ error: 'Failed to delete file' });
     }
 }));
-// Update file content in Supabase
+// Update file content
 router.put('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const { id } = req.params;
     const { content } = req.body;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
     try {
-        const file = yield prisma_1.default.file.findUnique({ where: { id } });
+        const file = yield prisma_1.default.file.findUnique({ where: { id: req.params.id } });
         if (!file)
             return res.status(404).json({ error: 'File not found' });
-        // Check if user is in workspace
         const membership = yield prisma_1.default.workspaceMember.findUnique({
             where: { workspaceId_userId: { workspaceId: file.workspaceId, userId: userId } }
         });
         if (!membership)
             return res.status(403).json({ error: 'Unauthorized' });
-        // Update in Supabase
-        const filePath = getFilePathFromUrl(file.url);
-        if (!filePath) {
-            return res.status(400).json({ error: 'Invalid file URL for update' });
+        if (supabase_1.USE_SUPABASE) {
+            const filePath = getFilePathFromUrl(file.url);
+            if (!filePath)
+                return res.status(400).json({ error: 'Invalid file URL for update' });
+            const { error } = yield supabase_1.supabase.storage
+                .from(supabase_1.supabaseBucket)
+                .upload(filePath, Buffer.from(content), {
+                contentType: file.type,
+                upsert: true
+            });
+            if (error)
+                return res.status(500).json({ error: 'Failed to update file in storage' });
         }
-        const { error } = yield supabase_1.supabase.storage
-            .from(supabase_1.supabaseBucket)
-            .upload(filePath, Buffer.from(content), {
-            contentType: file.type,
-            upsert: true
-        });
-        if (error) {
-            console.error('Supabase update error:', error);
-            return res.status(500).json({ error: 'Failed to update file in storage' });
+        else {
+            // Find and update local file
+            const relative = file.url.split('/uploads/files/')[1];
+            if (!relative)
+                return res.status(400).json({ error: 'Invalid file URL for update' });
+            const localPath = path_1.default.join(UPLOADS_DIR, 'files', relative);
+            try {
+                fs_1.default.writeFileSync(localPath, Buffer.from(content));
+            }
+            catch (err) {
+                console.error('Local file update error:', err);
+                return res.status(500).json({ error: 'Failed to update file locally' });
+            }
         }
-        // Update file size in DB
         yield prisma_1.default.file.update({
-            where: { id },
+            where: { id: req.params.id },
             data: { size: Buffer.byteLength(content) }
         });
         res.json({ message: 'File updated successfully' });

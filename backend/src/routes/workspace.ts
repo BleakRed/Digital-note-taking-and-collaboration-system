@@ -1,8 +1,6 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-
-const prisma = new PrismaClient();
+import prisma from '../prisma';
 const router = Router();
 
 // Create workspace
@@ -69,6 +67,37 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch workspaces' });
+  }
+});
+
+// Get workspace by ID
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const workspaceId = req.params.id;
+    const userId = req.user!.userId;
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } }
+    });
+    if (!membership) return res.status(403).json({ error: 'Not a member of this workspace' });
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: { id: true, email: true, name: true, username: true, avatarUrl: true }
+            }
+          }
+        }
+      }
+    });
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+    res.json(workspace);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch workspace' });
   }
 });
 

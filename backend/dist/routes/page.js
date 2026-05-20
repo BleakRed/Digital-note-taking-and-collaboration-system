@@ -8,11 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = __importDefault(require("../prisma"));
 const router = (0, express_1.Router)();
 // Create page
 router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -20,7 +22,7 @@ router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 
     try {
         const { title, workspaceId, parentId } = req.body;
         const authorId = req.user.userId;
-        const page = yield prisma.page.create({
+        const page = yield prisma_1.default.page.create({
             data: {
                 title,
                 content: '',
@@ -43,7 +45,7 @@ router.post('/', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 
 router.get('/workspace/:workspaceId', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const workspaceId = req.params.workspaceId;
-        const pages = yield prisma.page.findMany({
+        const pages = yield prisma_1.default.page.findMany({
             where: { workspaceId },
             orderBy: { createdAt: 'desc' }
         });
@@ -61,7 +63,7 @@ router.get('/workspace/:workspaceId', auth_1.authenticateToken, (req, res) => __
 router.get('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const id = req.params.id;
-        const page = yield prisma.page.findUnique({ where: { id } });
+        const page = yield prisma_1.default.page.findUnique({ where: { id } });
         if (!page)
             return res.status(404).json({ error: 'Page not found' });
         res.json(page);
@@ -79,7 +81,7 @@ router.put('/:id', auth_1.authenticateToken, (req, res) => __awaiter(void 0, voi
     try {
         const id = req.params.id;
         const { title, content } = req.body;
-        const page = yield prisma.page.update({
+        const page = yield prisma_1.default.page.update({
             where: { id },
             data: { title, content }
         });

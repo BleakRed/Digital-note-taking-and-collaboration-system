@@ -82,9 +82,8 @@ export default function KanbanBoard({ workspaceId, boardId }: { workspaceId: str
 
     const fetchWorkspace = async () => {
         try {
-            const { data } = await api.get('/workspaces');
-            const current = data.find((w: any) => w.id === workspaceId);
-            setWorkspace(current);
+            const { data } = await api.get(`/workspaces/${workspaceId}`);
+            setWorkspace(data);
         } catch (err) {}
     };
 

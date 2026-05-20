@@ -26,7 +26,6 @@ const cleanupUnverifiedUsers = () => __awaiter(void 0, void 0, void 0, function*
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     try {
-        // Find users not verified for more than a month
         const unverifiedUsers = yield prisma_1.default.user.findMany({
             where: {
                 isVerified: false,
@@ -34,36 +33,31 @@ const cleanupUnverifiedUsers = () => __awaiter(void 0, void 0, void 0, function*
             },
             include: {
                 ownedWorkspaces: {
-                    include: {
-                        files: true
-                    }
+                    include: { files: true }
                 }
             }
         });
         console.log(`[Cleanup] Found ${unverifiedUsers.length} unverified accounts to delete.`);
         for (const user of unverifiedUsers) {
-            // Collect all file paths from workspaces owned by this user
-            // Because of onDelete: Cascade, the records will be gone, but we need to delete physical files
-            const filesToDelete = [];
-            for (const workspace of user.ownedWorkspaces) {
-                for (const file of workspace.files) {
-                    const filePath = getFilePathFromUrl(file.url);
-                    if (filePath)
-                        filesToDelete.push(filePath);
+            if (supabase_1.USE_SUPABASE) {
+                const filesToDelete = [];
+                for (const workspace of user.ownedWorkspaces) {
+                    for (const file of workspace.files) {
+                        const filePath = getFilePathFromUrl(file.url);
+                        if (filePath)
+                            filesToDelete.push(filePath);
+                    }
+                }
+                if (filesToDelete.length > 0) {
+                    const { error } = yield supabase_1.supabase.storage
+                        .from(supabase_1.supabaseBucket)
+                        .remove(filesToDelete);
+                    if (error)
+                        console.error(`[Cleanup] Error deleting files for user ${user.id}:`, error);
+                    else
+                        console.log(`[Cleanup] Deleted ${filesToDelete.length} files from storage.`);
                 }
             }
-            if (filesToDelete.length > 0) {
-                const { error } = yield supabase_1.supabase.storage
-                    .from(supabase_1.supabaseBucket)
-                    .remove(filesToDelete);
-                if (error) {
-                    console.error(`[Cleanup] Error deleting files for user ${user.id}:`, error);
-                }
-                else {
-                    console.log(`[Cleanup] Deleted ${filesToDelete.length} files from storage.`);
-                }
-            }
-            // Delete the user (cascades to Workspace, Page, File records, etc.)
             yield prisma_1.default.user.delete({ where: { id: user.id } });
             console.log(`[Cleanup] Deleted user: ${user.email}`);
         }
@@ -76,34 +70,27 @@ exports.cleanupUnverifiedUsers = cleanupUnverifiedUsers;
 const cleanupOrphanedWorkspaces = () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('[Cleanup] Starting orphaned workspaces cleanup...');
     try {
-        // Find workspaces with no members
         const orphanedWorkspaces = yield prisma_1.default.workspace.findMany({
-            where: {
-                members: {
-                    none: {}
-                }
-            },
-            include: {
-                files: true
-            }
+            where: { members: { none: {} } },
+            include: { files: true }
         });
         console.log(`[Cleanup] Found ${orphanedWorkspaces.length} orphaned workspaces to delete.`);
         for (const workspace of orphanedWorkspaces) {
-            const filesToDelete = [];
-            for (const file of workspace.files) {
-                const filePath = getFilePathFromUrl(file.url);
-                if (filePath)
-                    filesToDelete.push(filePath);
-            }
-            if (filesToDelete.length > 0) {
-                const { error } = yield supabase_1.supabase.storage
-                    .from(supabase_1.supabaseBucket)
-                    .remove(filesToDelete);
-                if (error) {
-                    console.error(`[Cleanup] Error deleting files for workspace ${workspace.id}:`, error);
+            if (supabase_1.USE_SUPABASE) {
+                const filesToDelete = [];
+                for (const file of workspace.files) {
+                    const filePath = getFilePathFromUrl(file.url);
+                    if (filePath)
+                        filesToDelete.push(filePath);
                 }
-                else {
-                    console.log(`[Cleanup] Deleted ${filesToDelete.length} files from storage.`);
+                if (filesToDelete.length > 0) {
+                    const { error } = yield supabase_1.supabase.storage
+                        .from(supabase_1.supabaseBucket)
+                        .remove(filesToDelete);
+                    if (error)
+                        console.error(`[Cleanup] Error deleting files for workspace ${workspace.id}:`, error);
+                    else
+                        console.log(`[Cleanup] Deleted ${filesToDelete.length} files from storage.`);
                 }
             }
             yield prisma_1.default.workspace.delete({ where: { id: workspace.id } });

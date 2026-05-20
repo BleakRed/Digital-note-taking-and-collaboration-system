@@ -1,14 +1,13 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/mailer';
-
-const prisma = new PrismaClient();
+import prisma from '../prisma';
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+
+const getSecret = () => process.env.JWT_SECRET || 'secret';
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -35,13 +34,11 @@ router.post('/register', async (req: Request, res: Response) => {
         await sendVerificationEmail(user.email, verificationToken);
     } catch (mailError) {
         console.error('Failed to send verification email:', mailError);
-        // We don't fail registration if email fails, but maybe we should or at least inform the user
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '1d' });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, username: user.username, avatarUrl: user.avatarUrl, isVerified: user.isVerified } });
-  /* c8 ignore next 3 */
-} catch (error) {
+  } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -58,10 +55,9 @@ router.post('/login', async (req: Request, res: Response) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '1d' });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, username: user.username, avatarUrl: user.avatarUrl, isVerified: user.isVerified } });
-  /* c8 ignore next 3 */
-} catch (error) {
+  } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -15,13 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const crypto_1 = __importDefault(require("crypto"));
 const mailer_1 = require("../utils/mailer");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = __importDefault(require("../prisma"));
 const router = (0, express_1.Router)();
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+const getSecret = () => process.env.JWT_SECRET || 'secret';
 router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, confirmPassword, firstName, lastName } = req.body;
@@ -29,12 +28,12 @@ router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(400).json({ error: 'Email and password required' });
         if (password !== confirmPassword)
             return res.status(400).json({ error: 'Passwords do not match' });
-        const existingEmail = yield prisma.user.findUnique({ where: { email } });
+        const existingEmail = yield prisma_1.default.user.findUnique({ where: { email } });
         if (existingEmail)
             return res.status(400).json({ error: 'Email already exists' });
         const verificationToken = crypto_1.default.randomBytes(32).toString('hex');
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        const user = yield prisma.user.create({
+        const user = yield prisma_1.default.user.create({
             data: {
                 email,
                 password: hashedPassword,
@@ -47,11 +46,9 @@ router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         catch (mailError) {
             console.error('Failed to send verification email:', mailError);
-            // We don't fail registration if email fails, but maybe we should or at least inform the user
         }
-        const token = jsonwebtoken_1.default.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id }, getSecret(), { expiresIn: '1d' });
         res.json({ token, user: { id: user.id, email: user.email, name: user.name, username: user.username, avatarUrl: user.avatarUrl, isVerified: user.isVerified } });
-        /* c8 ignore next 3 */
     }
     catch (error) {
         console.error(error);
@@ -63,15 +60,14 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const { email, password } = req.body;
         if (!email || !password)
             return res.status(400).json({ error: 'Email and password required' });
-        const user = yield prisma.user.findUnique({ where: { email } });
+        const user = yield prisma_1.default.user.findUnique({ where: { email } });
         if (!user)
             return res.status(400).json({ error: 'Invalid credentials' });
         const valid = yield bcryptjs_1.default.compare(password, user.password);
         if (!valid)
             return res.status(400).json({ error: 'Invalid credentials' });
-        const token = jsonwebtoken_1.default.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id }, getSecret(), { expiresIn: '1d' });
         res.json({ token, user: { id: user.id, email: user.email, name: user.name, username: user.username, avatarUrl: user.avatarUrl, isVerified: user.isVerified } });
-        /* c8 ignore next 3 */
     }
     catch (error) {
         console.error(error);
@@ -81,12 +77,12 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
 router.post('/forgot-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email } = req.body;
-        const user = yield prisma.user.findUnique({ where: { email } });
+        const user = yield prisma_1.default.user.findUnique({ where: { email } });
         if (!user)
             return res.status(404).json({ error: 'User not found' });
         const resetToken = crypto_1.default.randomBytes(32).toString('hex');
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
-        yield prisma.user.update({
+        yield prisma_1.default.user.update({
             where: { id: user.id },
             data: { resetToken, resetTokenExpiry }
         });
@@ -109,7 +105,7 @@ router.post('/forgot-password', (req, res) => __awaiter(void 0, void 0, void 0, 
 router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { token, password } = req.body;
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.default.user.findFirst({
             where: {
                 resetToken: token,
                 resetTokenExpiry: { gt: new Date() }
@@ -118,7 +114,7 @@ router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, f
         if (!user)
             return res.status(400).json({ error: 'Invalid or expired token' });
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-        yield prisma.user.update({
+        yield prisma_1.default.user.update({
             where: { id: user.id },
             data: {
                 password: hashedPassword,
@@ -137,12 +133,12 @@ router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, f
 router.get('/verify-email', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { token } = req.query;
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.default.user.findFirst({
             where: { verificationToken: token }
         });
         if (!user)
             return res.status(400).json({ error: 'Invalid verification token' });
-        yield prisma.user.update({
+        yield prisma_1.default.user.update({
             where: { id: user.id },
             data: {
                 isVerified: true,
@@ -162,12 +158,12 @@ router.put('/profile', auth_1.authenticateToken, (req, res) => __awaiter(void 0,
         const userId = req.user.userId;
         const { username, avatarUrl, name, removeAvatar } = req.body;
         if (username) {
-            const existingUser = yield prisma.user.findUnique({ where: { username } });
+            const existingUser = yield prisma_1.default.user.findUnique({ where: { username } });
             if (existingUser && existingUser.id !== userId) {
                 return res.status(400).json({ error: 'Username already exists' });
             }
         }
-        const user = yield prisma.user.update({
+        const user = yield prisma_1.default.user.update({
             where: { id: userId },
             data: {
                 username,

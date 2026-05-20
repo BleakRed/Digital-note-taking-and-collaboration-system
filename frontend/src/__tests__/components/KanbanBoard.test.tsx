@@ -159,10 +159,10 @@ describe('KanbanBoard Component', () => {
     })
   })
 
-  it('renders board description', async () => {
+  it('renders board title', async () => {
     render(<KanbanBoard workspaceId="ws1" boardId="board1" />)
     await waitFor(() => {
-      expect(screen.getByText(/Task management board/i)).toBeInTheDocument()
+      expect(screen.getByText('Project Board')).toBeInTheDocument()
     })
   })
 

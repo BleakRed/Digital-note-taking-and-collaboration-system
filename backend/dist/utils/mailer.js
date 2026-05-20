@@ -14,19 +14,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendPasswordResetEmail = exports.sendVerificationEmail = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
-const transporter = nodemailer_1.default.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const USE_SMTP = !!(SMTP_USER && SMTP_PASS);
+const transporter = USE_SMTP
+    ? nodemailer_1.default.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_PORT === '465',
+        auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+    : null;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const FROM_EMAIL = process.env.SMTP_FROM || 'Notion Clone <noreply@example.com>';
 const sendVerificationEmail = (email, token) => __awaiter(void 0, void 0, void 0, function* () {
-    if (process.env.NODE_ENV === 'test')
+    if (process.env.NODE_ENV === 'test' || !USE_SMTP)
         return;
     const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
     const mailOptions = {
@@ -44,7 +46,7 @@ const sendVerificationEmail = (email, token) => __awaiter(void 0, void 0, void 0
 });
 exports.sendVerificationEmail = sendVerificationEmail;
 const sendPasswordResetEmail = (email, token) => __awaiter(void 0, void 0, void 0, function* () {
-    if (process.env.NODE_ENV === 'test')
+    if (process.env.NODE_ENV === 'test' || !USE_SMTP)
         return;
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
     const mailOptions = {

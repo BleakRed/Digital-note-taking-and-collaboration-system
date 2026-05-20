@@ -4,11 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import prisma from '../prisma';
-import { supabase, supabaseBucket } from '../supabase';
+import { supabase, supabaseBucket, USE_SUPABASE } from '../supabase';
 
 const router = Router();
-
-const USE_SUPABASE = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Use memory storage for Multer
 const storage = multer.memoryStorage();
@@ -27,6 +25,10 @@ if (!USE_SUPABASE && !fs.existsSync(UPLOADS_DIR)) {
 const getFilePathFromUrl = (url: string) => {
   const parts = url.split(`/storage/v1/object/public/${supabaseBucket}/`);
   return parts.length > 1 ? parts[1] : null;
+};
+
+const getBaseUrl = (req: AuthRequest) => {
+  return process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 };
 
 // Upload a file to a workspace
@@ -70,7 +72,7 @@ router.post('/workspace/:workspaceId', authenticateToken, upload.single('file'),
       const localFilename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExt}`;
       const localPath = path.join(localDir, localFilename);
       fs.writeFileSync(localPath, file.buffer);
-      const baseUrl = process.env.FRONTEND_URL?.replace(/\/api.*/, '') || 'http://localhost:8000';
+      const baseUrl = getBaseUrl(req);
       publicUrl = `${baseUrl}/uploads/files/${workspaceId}/${localFilename}`;
     }
 

@@ -69,8 +69,12 @@ export default function Dashboard() {
     try {
       const { data } = await api.get("/workspaces");
       setWorkspaces(data);
-    } catch (err) {
-      router.push("/");
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        Cookies.remove('token');
+        Cookies.remove('user');
+        router.push("/");
+      }
     } finally {
       setLoading(false);
     }

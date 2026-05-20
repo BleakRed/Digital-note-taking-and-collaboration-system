@@ -1,20 +1,23 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const USE_SMTP = !!(SMTP_USER && SMTP_PASS);
+
+const transporter = USE_SMTP
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_PORT === '465',
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+  : null;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const FROM_EMAIL = process.env.SMTP_FROM || 'Notion Clone <noreply@example.com>';
 
 export const sendVerificationEmail = async (email: string, token: string) => {
-  if (process.env.NODE_ENV === 'test') return;
+  if (process.env.NODE_ENV === 'test' || !USE_SMTP) return;
   const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
   
   const mailOptions = {
@@ -29,11 +32,11 @@ export const sendVerificationEmail = async (email: string, token: string) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await transporter!.sendMail(mailOptions);
 };
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
-  if (process.env.NODE_ENV === 'test') return;
+  if (process.env.NODE_ENV === 'test' || !USE_SMTP) return;
   const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
   
   const mailOptions = {
@@ -49,5 +52,5 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await transporter!.sendMail(mailOptions);
 };
